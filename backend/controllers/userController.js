@@ -213,12 +213,31 @@ async function ensureUserProfileSchema() {
 
 async function ensureProfileRowForUser(userId) {
   await ensureUserProfileSchema();
-  await db.query(
-    `INSERT INTO ${USER_PROFILE_TABLE} (user_id, "createdAt", "updatedAt")
-     VALUES ($1, NOW(), NOW())
-     ON CONFLICT (user_id) DO NOTHING`,
-    { bind: [userId] }
-  );
+  try {
+    await db.query(
+      `INSERT INTO ${USER_PROFILE_TABLE} (user_id, "createdAt", "updatedAt")
+       VALUES ($1, NOW(), NOW())
+       ON CONFLICT (user_id) DO NOTHING`,
+      { bind: [userId] }
+    );
+  } catch (err) {
+    const code = String(err?.original?.code || err?.parent?.code || err?.code || "").trim();
+    if (code !== "42P10") {
+      throw err;
+    }
+
+    // Fallback for legacy databases that still miss a UNIQUE/PK on user_id.
+    await db.query(
+      `INSERT INTO ${USER_PROFILE_TABLE} (user_id, "createdAt", "updatedAt")
+       SELECT $1, NOW(), NOW()
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM ${USER_PROFILE_TABLE}
+         WHERE user_id = $1
+       )`,
+      { bind: [userId] }
+    );
+  }
 }
 
 async function getProfileRowByUserId(userId) {
