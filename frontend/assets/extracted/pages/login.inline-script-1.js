@@ -7,6 +7,19 @@ function getLoginInputElement(){
         || document.getElementById("user");
 }
 
+function clearCredentialFields(){
+    const userEl = getLoginInputElement();
+    const passEl = document.getElementById("password");
+    [userEl, passEl].forEach((el) => {
+        if(!el) return;
+        if(String(el.value || "").length === 0) return;
+        el.value = "";
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+}
+
+
 function setLoadingOverlay(visible, message){
     if(!axisLoadingOverlay) return;
     if(axisLoadingTitle && message){
@@ -69,20 +82,15 @@ async function login(){
     }
 }
 
-async function forgotPassword(){
+function goToForgotPasswordPage(){
     const emailInput = getLoginInputElement();
     const email = String(emailInput && emailInput.value ? emailInput.value : "").trim();
-    if(!email){
-        alert("Enter your email address first.");
-        if(emailInput) emailInput.focus();
-        return;
+    const query = new URLSearchParams();
+    if(email){
+        query.set("email", email);
     }
-    try{
-        await request("/auth/forgot-password","POST",{email});
-        alert("Email matched. Password details sent to your email.");
-    }catch(err){
-        alert(err.message || "Failed to send email");
-    }
+    const suffix = query.toString();
+    window.location.href = suffix ? `forgot-password.html?${suffix}` : "forgot-password.html";
 }
 
 function togglePassword(){
@@ -102,11 +110,18 @@ const loginBtn = document.getElementById("loginBtn");
 if(loginBtn){
     loginBtn.addEventListener("click", login);
 }
+const loginForm = document.getElementById("loginForm");
+if(loginForm){
+    loginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        login();
+    });
+}
 const forgotPasswordLink = document.getElementById("forgotPasswordLink");
 if(forgotPasswordLink){
     forgotPasswordLink.addEventListener("click", (e) => {
         e.preventDefault();
-        forgotPassword();
+        goToForgotPasswordPage();
     });
 }
 const passwordToggle = document.getElementById("passwordToggle");
@@ -119,11 +134,27 @@ if(passwordToggle){
     el.addEventListener("keydown", (e) => {
         if(e.key === "Enter"){
             e.preventDefault();
+            login();
         }
     });
 });
 
 window.addEventListener("DOMContentLoaded", () => {
-    setLoadingOverlay(true, "Starting AXIS WEB SYSTEM...");
+    setLoadingOverlay(true, "Starting AXIS PRODUCTION SYSTEM...");
+    const loginForm = document.getElementById("loginForm");
+    const userEl = getLoginInputElement();
+    const passEl = document.getElementById("password");
+    if(loginForm){
+        loginForm.setAttribute("autocomplete", "off");
+    }
+    if(userEl){
+        userEl.setAttribute("autocomplete", "off");
+    }
+    if(passEl){
+        passEl.setAttribute("autocomplete", "off");
+    }
+    clearCredentialFields();
+    window.setTimeout(clearCredentialFields, 120);
+    window.setTimeout(clearCredentialFields, 320);
     window.setTimeout(() => setLoadingOverlay(false), 950);
 });

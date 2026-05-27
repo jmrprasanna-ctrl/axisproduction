@@ -1,4 +1,4 @@
-# pulmotech_inhouse
+# axis_production
 
 A **Full-Stack IT Inventory and POS Management System** with modern Franchised UI, including:
 
@@ -15,7 +15,7 @@ A **Full-Stack IT Inventory and POS Management System** with modern Franchised U
 ## 📂 Project Structure
 
 
-pulmotech_inhouse/
+axis_production/
 │
 ├── backend/
 │ ├── config/
@@ -103,8 +103,8 @@ pulmotech_inhouse/
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/jmrprasanna-ctrl/pulmo_web.git
-cd pulmo_web
+git clone https://github.com/jmrprasanna-ctrl/axis_production.git
+cd axis_production
 
 ## AWS Server Commands
 

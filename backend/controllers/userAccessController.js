@@ -159,10 +159,36 @@ const ACCESS_MODULE_OPTIONS = [
     items: [
       { path: "/reports/sales-report.html", label: "Sales Report", actions: ["view"] },
       { path: "/analytics/sales-chart.html", label: "Sales Chart", actions: ["view"] },
+      { path: "/stock/stock.html", label: "Stock", actions: ["view", "edit"] },
+    ],
+  },
+  {
+    module: "Finance",
+    items: [
       { path: "/finance/finance.html", label: "Finance", actions: ["view"] },
       { path: "/finance/payments.html", label: "Payments", actions: ["view"] },
       { path: "/finance/pendings.html", label: "Pendings", actions: ["view"] },
-      { path: "/stock/stock.html", label: "Stock", actions: ["view", "edit"] },
+      { path: "/finance/sup-tech-pay.html", label: "Sup.Tech Pay", actions: ["view"] },
+      { path: "/finance/sup-tech-pay-update.html", label: "Sup.Tech Pay Update", actions: ["view", "edit"] },
+    ],
+  },
+  {
+    module: "HR",
+    items: [
+      { path: "/hr/inout.html", label: "INOUT", actions: ["view", "add", "edit"] },
+      { path: "/hr/time-sheet.html", label: "Time Sheet", actions: ["view", "edit"] },
+      { path: "/hr/sallary.html", label: "Sallary", actions: ["view", "edit"] },
+      { path: "/hr/sallary-detail.html", label: "Sallary Detail", actions: ["view", "edit"] },
+      { path: "/hr/leave.html", label: "Leave", actions: ["view", "add"] },
+      { path: "/hr/payslip.html", label: "Payslip", actions: ["view"] },
+      { path: "/hr/payslip-view.html", label: "Payslip View", actions: ["view", "add"] },
+    ],
+  },
+  {
+    module: "Services",
+    items: [
+      { path: "/services/service-list.html", label: "Service List", actions: ["view", "add", "delete"] },
+      { path: "/services/add-service.html", label: "Add Service", actions: ["view", "add"] },
     ],
   },
   {
@@ -172,6 +198,7 @@ const ACCESS_MODULE_OPTIONS = [
       { path: "/notifications/notifications.html", label: "Notifications", actions: ["view"] },
       { path: "/support/support.html", label: "Support", actions: ["view", "add", "edit", "delete"] },
       { path: "/support/warrenty.html", label: "Warrenty", actions: ["view"] },
+      { path: "/support/warranty-invoice-view.html", label: "Warranty Invoice View", actions: ["view"] },
       { path: "/users/technician-list.html", label: "Support Technician", actions: ["view", "add", "edit", "delete"] },
     ],
   },
@@ -188,12 +215,11 @@ const ACCESS_MODULE_OPTIONS = [
       { path: "/users/company-create.html", label: "Company Create", actions: ["view", "add", "delete"] },
       { path: "/users/mapped.html", label: "Mapped", actions: ["view", "add"] },
       { path: "/users/inv-map.html", label: "Inv Map", actions: ["view", "add", "delete"] },
-      { path: "/users/preference.html", label: "Preference", actions: ["view", "edit"] },
+      { path: "/users/user-preference.html", label: "User Preference", actions: ["view", "edit"] },
+      { path: "/users/preference.html", label: "System Preference", actions: ["view", "edit"] },
       { path: "/users/user-logged.html", label: "User Logged Times", actions: ["view"] },
+      { path: "/users/backup.html", label: "Backup", actions: ["view", "edit"] },
       { path: "/support/email-setup.html", label: "Email Setup", actions: ["view", "edit"] },
-      { path: "/tools/check-backup.html", label: "Check Tools Button", actions: ["view"] },
-      { path: "/tools/backup-download.html", label: "Backup Button", actions: ["view"] },
-      { path: "/tools/upload-db.html", label: "Upload DB Button", actions: ["view"] },
     ],
   },
   {
@@ -244,6 +270,7 @@ function normalizePages(rawPages) {
     new Set(
       list
         .map((p) => String(p || "").trim())
+        .map((p) => (p.toLowerCase() === "/support/warrenty-invoice-view.html" ? "/support/warranty-invoice-view.html" : p))
         .filter(Boolean)
         .filter((p) => !EXCLUDED_PAGES.has(p.toLowerCase()))
         .filter((p) => ACCESS_PATH_SET.has(p.toLowerCase()))
@@ -257,6 +284,7 @@ function normalizeActions(rawActions) {
     new Set(
       list
         .map((x) => String(x || "").trim().toLowerCase())
+        .map((x) => x.replace("/support/warrenty-invoice-view.html::", "/support/warranty-invoice-view.html::"))
         .filter(Boolean)
         .filter((x) => ACCESS_ACTION_SET.has(x))
     )
@@ -303,6 +331,17 @@ function expandImplicitActionDependencies(actionKeys) {
     add("/users/edit-profile.html", "view");
     add("/users/edit-profile.html", "edit");
   }
+  if (set.has(toActionKey("/hr/sallary.html", "edit"))) {
+    add("/hr/sallary-detail.html", "view");
+    add("/hr/sallary-detail.html", "edit");
+  }
+  if (set.has(toActionKey("/hr/payslip.html", "view"))) {
+    add("/hr/payslip-view.html", "view");
+  }
+  if (set.has(toActionKey("/hr/payslip-view.html", "add"))) {
+    add("/hr/payslip-view.html", "view");
+    add("/hr/payslip.html", "view");
+  }
   if (set.has(toActionKey("/users/technician-list.html", "add"))) {
     add("/users/add-technician.html", "view");
     add("/users/add-technician.html", "add");
@@ -334,6 +373,29 @@ function parseAllowedActions(row) {
   } catch (_err) {
     return [];
   }
+}
+
+function normalizeAccessRole(value) {
+  const role = String(value || "").trim().toLowerCase();
+  if (role === "coordinator" || role === "cordinator" || role === "co-ordinator" || role === "co ordinator" || role === "co_ordinator") {
+    return "user";
+  }
+  return role;
+}
+
+function getEmergencyRecoveryAccess(role) {
+  if (role !== "admin") {
+    return { pages: [], actions: [] };
+  }
+
+  const actions = expandImplicitActionDependencies([
+    "/dashboard.html::view",
+    "/users/backup.html::view",
+    "/users/backup.html::edit",
+  ]);
+  const pages = derivePagesFromActions(actions, ["/dashboard.html", "/users/backup.html"]);
+
+  return { pages, actions };
 }
 
 function derivePagesFromActions(actionKeys, fallbackPages) {
@@ -382,6 +444,9 @@ function normalizeCompanyCode(value) {
 function normalizeEmail(value) {
   const normalized = String(value || "").trim().toLowerCase();
   if (!normalized) return "";
+  if (normalized === "info@axisproduction.com") {
+    return "info@axisproduction.com";
+  }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) return "";
   return normalized.slice(0, 200);
 }
@@ -473,7 +538,7 @@ async function ensureUserMappingTable(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS user_mappings (
       id SERIAL PRIMARY KEY,
-      user_id INTEGER UNIQUE NOT NULL,
+      user_id INTEGER NOT NULL,
       company_profile_id INTEGER NOT NULL REFERENCES ${COMPANY_REGISTRY_TABLE}(id) ON DELETE CASCADE,
       database_name VARCHAR(120) NOT NULL,
       mapped_email VARCHAR(200),
@@ -486,6 +551,42 @@ async function ensureUserMappingTable(client) {
   await client.query(`
     ALTER TABLE user_mappings
     ADD COLUMN IF NOT EXISTS mapped_email VARCHAR(200);
+  `);
+  await client.query(`
+    UPDATE user_mappings
+    SET database_name = LOWER(TRIM(database_name))
+    WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
+  `);
+  await client.query(`
+    WITH ranked AS (
+      SELECT id,
+             ROW_NUMBER() OVER (
+               PARTITION BY user_id, LOWER(COALESCE(database_name, ''))
+               ORDER BY "updatedAt" DESC NULLS LAST, id DESC
+             ) AS rn
+      FROM user_mappings
+    )
+    DELETE FROM user_mappings um
+    USING ranked r
+    WHERE um.id = r.id AND r.rn > 1;
+  `);
+  await client.query(`
+    ALTER TABLE user_mappings
+    DROP CONSTRAINT IF EXISTS user_mappings_user_id_key;
+  `);
+  await client.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'user_mappings_user_db_unique'
+          AND conrelid = 'user_mappings'::regclass
+      ) THEN
+        ALTER TABLE user_mappings
+        ADD CONSTRAINT user_mappings_user_db_unique UNIQUE (user_id, database_name);
+      END IF;
+    END $$;
   `);
 }
 
@@ -731,6 +832,7 @@ async function findMappedUserProfile(userId) {
        FROM user_mappings um
        JOIN ${COMPANY_REGISTRY_TABLE} cp ON cp.id = um.company_profile_id
        WHERE um.user_id = $1
+       ORDER BY um."updatedAt" DESC NULLS LAST, um.id DESC
        LIMIT 1`,
       [userId]
     );
@@ -1271,8 +1373,10 @@ exports.getAccessUsers = async (_req, res) => {
       });
 
       const mappingRs = await mainDbClient.query(
-        `SELECT user_id, database_name
-         FROM user_mappings`
+        `SELECT DISTINCT ON (user_id)
+            user_id, database_name
+         FROM user_mappings
+         ORDER BY user_id, "updatedAt" DESC NULLS LAST, id DESC`
       );
       (mappingRs.rows || []).forEach((row) => {
         const userId = Number(row?.user_id || 0);
@@ -1890,8 +1994,12 @@ async function syncMappedEmailSetupForDatabase(normalizedMapping) {
       from_name: companyName,
       subject_template: subjectTemplate,
     };
-    if (mappedEmail) {
+    const existingSmtpUser = String(row?.smtp_user || "").trim();
+    const existingFromEmail = String(row?.from_email || "").trim();
+    if (mappedEmail && !existingSmtpUser) {
       payload.smtp_user = mappedEmail;
+    }
+    if (mappedEmail && !existingFromEmail) {
       payload.from_email = mappedEmail;
     }
     await row.update(payload);
@@ -1976,6 +2084,7 @@ exports.getMappedByUser = async (req, res) => {
        FROM user_mappings um
        JOIN ${COMPANY_REGISTRY_TABLE} cp ON cp.id = um.company_profile_id
        WHERE um.user_id = $1
+       ORDER BY um."updatedAt" DESC NULLS LAST, um.id DESC
        LIMIT 1`,
       [userId]
     );
@@ -2078,9 +2187,8 @@ exports.saveMapping = async (req, res) => {
       `INSERT INTO user_mappings
        (user_id, company_profile_id, database_name, mapped_email, is_verified, created_by, "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, TRUE, $5, NOW(), NOW())
-       ON CONFLICT (user_id)
+       ON CONFLICT (user_id, database_name)
        DO UPDATE SET company_profile_id = EXCLUDED.company_profile_id,
-                     database_name = EXCLUDED.database_name,
                      mapped_email = EXCLUDED.mapped_email,
                      is_verified = TRUE,
                      "updatedAt" = NOW()`,
@@ -2770,30 +2878,46 @@ exports.getMyAccess = async (req, res) => {
   if (!Number.isFinite(userId) || userId <= 0) {
     return res.status(401).json({ message: "Invalid token user" });
   }
+  const role = normalizeAccessRole(req.user?.role);
 
   const userDatabase = normalizeUserDatabase(req.databaseName || req.user?.database_name || INVENTORY_DB_NAME);
+
+  const findAccessFromCurrentDb = async (targetDatabase) => {
+    try {
+      return await UserAccess.findOne({
+        where: { user_id: userId, user_database: targetDatabase },
+        order: [["updatedAt", "DESC"], ["id", "DESC"]],
+      });
+    } catch (_err) {
+      return null;
+    }
+  };
 
                                                                               
                                                                                         
   let row = await findAccessFromMainDb(userId, userDatabase);
   if (!row) {
-    row = await UserAccess.findOne({
-      where: { user_id: userId, user_database: userDatabase },
-      order: [["updatedAt", "DESC"], ["id", "DESC"]],
-    });
+    row = await findAccessFromCurrentDb(userDatabase);
   }
   if (!row && userDatabase !== INVENTORY_DB_NAME) {
     row = await findAccessFromMainDb(userId, INVENTORY_DB_NAME);
     if (!row) {
-      row = await UserAccess.findOne({
-        where: { user_id: userId, user_database: INVENTORY_DB_NAME },
-        order: [["updatedAt", "DESC"], ["id", "DESC"]],
-      });
+      row = await findAccessFromCurrentDb(INVENTORY_DB_NAME);
     }
   }
-  const allowedActions = parseAllowedActions(row);
-  const allowedPages = derivePagesFromActions(allowedActions, parseAllowedPages(row));
-  const hasAccessConfig = Boolean(row) || allowedPages.length > 0 || allowedActions.length > 0;
+  const parsedActions = parseAllowedActions(row);
+  const parsedPages = derivePagesFromActions(parsedActions, parseAllowedPages(row));
+  const hasStoredConfig = Boolean(row) || parsedPages.length > 0 || parsedActions.length > 0;
+  let allowedActions = parsedActions;
+  let allowedPages = parsedPages;
+  if (!hasStoredConfig) {
+    const emergency = getEmergencyRecoveryAccess(role);
+    if (emergency.pages.length > 0 || emergency.actions.length > 0) {
+      allowedActions = normalizeActions(emergency.actions);
+      allowedPages = normalizePages(emergency.pages);
+    }
+  }
+  const hasAccessConfig = hasStoredConfig || allowedPages.length > 0 || allowedActions.length > 0;
   const mappedProfile = await findMappedUserProfile(userId);
 
   res.json({

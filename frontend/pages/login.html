@@ -1,5 +1,5 @@
 <!--
-  System: PULMO WEB SYSTEM
+  System: AXIS PRODUCTION SYSTEM
   Owner : CRONIT SOLLUTIONS
   Author: JMR Prasanna
 -->
@@ -8,7 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PULMO TECHNOLOGIES - Login</title>
+<title>AXIS PRODUCTION - Login</title>
 <link rel="stylesheet" href="../assets/extracted/pages/login.inline-style-1.css">
 </head>
 <body>
@@ -16,48 +16,67 @@
 <div class="axis-loader-overlay is-active" id="axisLoadingOverlay" aria-hidden="false">
     <div class="axis-loader-card" role="status" aria-live="polite">
         <div class="axis-loader-logo-wrap">
-            <img src="../assets/images/axis-loading-logo.png" alt="AXIS WEB SYSTEM">
+            <img src="../assets/images/axis-loading-logo.png" alt="AXIS PRODUCTION SYSTEM">
         </div>
         <div class="axis-loader-spinner" aria-hidden="true">
             <span></span><span></span><span></span><span></span>
             <span></span><span></span><span></span><span></span>
         </div>
-        <p class="axis-loader-title" id="axisLoadingTitle">Starting AXIS WEB SYSTEM...</p>
+        <p class="axis-loader-title" id="axisLoadingTitle">Starting AXIS PRODUCTION SYSTEM...</p>
     </div>
 </div>
 
 <div class="login-container">
     <img src="../assets/images/logo.png" alt="Company Logo">
     <h2>User Login</h2>
-    <p class="login-meta">PULMO TECHNOLOGIES</p>
-    <div class="field">
-        <label for="User">User</label>
-        <input type="text" id="User" placeholder="User" required>
-    </div>
-    <div class="field">
-        <label for="password">Password</label>
-        <div class="password-wrap">
-            <input type="password" id="password" placeholder="Password" required>
-            <button
-                type="button"
-                class="password-toggle"
-                id="passwordToggle"
-                aria-label="Show password"
-                aria-pressed="false"
+    <p class="login-meta">AXIS PRODUCTION</p>
+    <form id="loginForm" method="post" autocomplete="off" novalidate>
+        <div class="field">
+            <label for="User">User</label>
+            <input
+                type="text"
+                id="User"
+                name="username"
+                placeholder="User"
+                autocomplete="off"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                required
             >
-                <svg id="eyeIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M2 12C3.9 8 7.4 5.5 12 5.5C16.6 5.5 20.1 8 22 12C20.1 16 16.6 18.5 12 18.5C7.4 18.5 3.9 16 2 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/>
-                </svg>
-            </button>
         </div>
-    </div>
-    <button class="login-btn" id="loginBtn" type="button">Login</button>
-    <a href="#" class="forgot-password" id="forgotPasswordLink">Forgot password?</a>
+        <div class="field">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Password"
+                    autocomplete="off"
+                    required
+                >
+                <button
+                    type="button"
+                    class="password-toggle"
+                    id="passwordToggle"
+                    aria-label="Show password"
+                    aria-pressed="false"
+                >
+                    <svg id="eyeIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M2 12C3.9 8 7.4 5.5 12 5.5C16.6 5.5 20.1 8 22 12C20.1 16 16.6 18.5 12 18.5C7.4 18.5 3.9 16 2 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.8"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <button class="login-btn" id="loginBtn" type="submit">Login</button>
+    </form>
+    <a href="forgot-password.html" class="forgot-password" id="forgotPasswordLink">Forgot password?</a>
 </div>
 
-<script src="../assets/js/api.js"></script>
-<script src="../assets/extracted/pages/login.inline-script-1.js"></script>
+<script src="../assets/js/api.js?v=20260522p01"></script>
+<script src="../assets/extracted/pages/login.inline-script-1.js?v=20260522p01"></script>
 
 </body>
 </html>

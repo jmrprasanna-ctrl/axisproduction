@@ -1,5 +1,5 @@
 <!--
-  System: PULMO WEB SYSTEM 
+  System: AXIS PRODUCTION SYSTEM 
   Owner : CRONIT SOLLUTIONS 
   Author: JMR Prasanna
 -->
@@ -8,7 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Email Setup - PULMO TECHNOLOGIES</title>
+<title>Email Setup - AXIS PRODUCTION</title>
 <link rel="stylesheet" href="../../assets/css/style.css">
 <link rel="stylesheet" href="../../assets/css/dashboard.css">
 <style>
@@ -35,7 +35,7 @@
 <div class="sidebar">
     <div class="logo">
         <img src="../../assets/images/logo.png" alt="Company Logo">
-        <span>PULMO TECHNOLOGIES</span>
+        <span>AXIS PRODUCTION</span>
     </div>
     <ul class="nav-links">
         <li><a href="../dashboard.html">Dashboard</a></li>
@@ -63,6 +63,10 @@
     <div class="card">
         <form id="emailSetupForm">
             <div id="mappedDefaultsHint" class="path-hint" style="margin-bottom:10px;"></div>
+            <div style="margin-bottom:10px;max-width:420px;">
+                <label for="mappedDatabaseSelect">Mapped Company</label>
+                <select id="mappedDatabaseSelect"></select>
+            </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
                 <div>
                     <label for="smtp_host">SMTP Host</label>
@@ -83,7 +87,7 @@
                 </div>
                 <div>
                     <label for="from_name">From Name</label>
-                    <input type="text" id="from_name" placeholder="PULMO TECHNOLOGIES">
+                    <input type="text" id="from_name" placeholder="AXIS PRODUCTION">
                 </div>
                 <div>
                     <label for="from_email">From Email</label>
@@ -99,14 +103,24 @@
                 Gmail: use <strong>App Password</strong> (not normal password). Recommended: <code>smtp.gmail.com</code>,
                 Port <code>587</code> with Secure <code>OFF</code> or Port <code>465</code> with Secure <code>ON</code>.
             </div>
+            <div style="margin-top:10px;max-width:380px;">
+                <label for="emailTemplateType">Email Type</label>
+                <select id="emailTemplateType">
+                    <option value="frogot_password">Frogot Password</option>
+                    <option value="quatation">Quatation</option>
+                    <option value="invoice">Invoice</option>
+                    <option value="support_technician">Support Technician</option>
+                    <option value="vender">Vender</option>
+                </select>
+            </div>
 
             <label for="subject_template" style="margin-top:12px;">Subject Template</label>
-            <input type="text" id="subject_template" placeholder="Invoice {{invoice_no}} - PULMO TECHNOLOGIES">
+            <input type="text" id="subject_template" placeholder="Invoice {{invoice_no}} - AXIS PRODUCTION">
 
             <label for="body_template" style="margin-top:12px;">Body Template</label>
             <textarea id="body_template" rows="8" placeholder="Dear {{customer_name}}, ..."></textarea>
 
-            <small>Available placeholders: <code>{{invoice_no}}</code>, <code>{{customer_name}}</code>, <code>{{total_amount}}</code>, <code>{{invoice_date}}</code></small>
+            <small>Available placeholders: <code>{{invoice_no}}</code>, <code>{{customer_name}}</code>, <code>{{total_amount}}</code>, <code>{{invoice_date}}</code>, <code>{{quotation_no}}</code>, <code>{{quotation_amount}}</code>, <code>{{quotation_date}}</code>, <code>{{user_name}}</code>, <code>{{email}}</code>, <code>{{password}}</code></small>
 
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
                 <button class="icon-btn" type="submit" aria-label="Save setup" title="Save setup">
@@ -118,6 +132,7 @@
                 </button>
             </div>
         </form>
+
     </div>
 </div>
 

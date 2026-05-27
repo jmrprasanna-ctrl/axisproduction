@@ -10,6 +10,7 @@ const db = require("../config/database");
 const EmailSetup = require("../models/EmailSetup");
 const UiSetting = require("../models/UiSetting");
 const { sendEmail } = require("../services/emailService");
+const { queueAutoInvoiceBackup, handleInvoiceDeletionBackup } = require("./systemBackupController");
 const Op = Sequelize.Op;
 const ALLOWED_WARRANTY_PERIODS = new Set(["3 month", "6 month", "1 year", "2 year"]);
 const USER_PREF_TABLE = "user_preference_settings";
@@ -370,13 +371,13 @@ function isSmtpAuthFailure(err){
 }
 
 function buildSmtpPayload(setup){
-    const smtpHost = String(setup?.smtp_host || process.env.SMTP_HOST || "").trim();
-    const smtpPort = Number(setup?.smtp_port || process.env.SMTP_PORT || 587);
-    const smtpSecure = !!(setup?.smtp_secure || String(process.env.SMTP_SECURE || "").toLowerCase() === "true");
-    const smtpUser = String(setup?.smtp_user || process.env.SMTP_USER || "").trim();
-    const smtpPass = String(setup?.smtp_pass || process.env.SMTP_PASS || "").trim();
-    const fromName = String(setup?.from_name || "PULMO TECHNOLOGIES").trim();
-    const fromEmail = String(setup?.from_email || process.env.SMTP_FROM || smtpUser).trim();
+    const smtpHost = String(setup?.smtp_host || "").trim();
+    const smtpPort = Number(setup?.smtp_port || 587);
+    const smtpSecure = !!setup?.smtp_secure;
+    const smtpUser = String(setup?.smtp_user || "").trim();
+    const smtpPass = String(setup?.smtp_pass || "").trim();
+    const fromName = String(setup?.from_name || "AXIS PRODUCTION").trim();
+    const fromEmail = String(setup?.from_email || smtpUser).trim();
     const from = fromEmail.includes("<") ? fromEmail : `"${fromName}" <${fromEmail}>`;
 
     return {
@@ -389,6 +390,13 @@ function buildSmtpPayload(setup){
         },
         from
     };
+}
+
+function toPlainSetup(setupLike){
+    if(setupLike && typeof setupLike.toJSON === "function"){
+        return setupLike.toJSON();
+    }
+    return { ...(setupLike || {}) };
 }
 
 function hasSmtpConfig(payload){
@@ -405,6 +413,26 @@ function smtpSignature(payload){
         String(cfg.user || "").trim().toLowerCase(),
         String(cfg.pass || "").trim()
     ].join("|");
+}
+
+function maskEmailValue(value){
+    const raw = String(value || "").trim().toLowerCase();
+    const at = raw.indexOf("@");
+    if(at <= 1) return raw || "(empty)";
+    const local = raw.slice(0, at);
+    const domain = raw.slice(at + 1);
+    const head = local.length <= 2 ? `${local[0]}*` : `${local.slice(0, 2)}***`;
+    return `${head}@${domain}`;
+}
+
+function smtpCandidateLabel(candidate){
+    const cfg = candidate?.smtpConfig || {};
+    const host = String(cfg.host || "").trim().toLowerCase() || "(empty)";
+    const port = Number(cfg.port || 0) || 0;
+    const secure = cfg.secure ? "ON" : "OFF";
+    const user = maskEmailValue(cfg.user || "");
+    const passLength = String(cfg.pass || "").trim().length;
+    return `host=${host} port=${port} secure=${secure} user=${user} pass_len=${passLength}`;
 }
 
 function normalizeIsoDate(value) {
@@ -532,10 +560,10 @@ exports.getInvoice = async (req,res)=>{
             quotation2_items: quotation2Items,
             InvoiceImportants: (raw.InvoiceImportants || []).sort((a, b) => (a.line_no || 0) - (b.line_no || 0)),
             print_meta: {
-                company_name: "PULMO TECHNOLOGIES",
+                company_name: "AXIS PRODUCTION",
                 company_address: "No 30/1, Muddaragama, Veyangoda",
                 company_tel: "0770 3000 80",
-                company_email: "pulmotechnologies@gmail.com",
+                company_email: "info@axisproduction.com",
                 registration_no: "PV-52810",
                 copy_label: "ORIGINAL"
             },
@@ -575,6 +603,9 @@ exports.deleteInvoice = async (req,res)=>{
             await InvoiceImportant.destroy({ where: { id: important.id } });
         }
         await Invoice.destroy({ where: { id: invoice.id } });
+        await handleInvoiceDeletionBackup(targetDbName, invoice.id).catch((backupErr) => {
+            console.error("Google Drive invoice backup delete warning:", backupErr?.message || backupErr);
+        });
         res.json({ message: "Invoice deleted" });
     }catch(err){
         console.error(err);
@@ -936,6 +967,10 @@ exports.createInvoice = async (req,res)=>{
                 lineNo += 1;
             }
         }
+        const targetDbName = db.normalizeDatabaseName(req.databaseName || req.user?.database_name || req.headers["x-database-name"]) || INVENTORY_DB_NAME;
+        queueAutoInvoiceBackup(targetDbName, invoice.id).catch((backupErr) => {
+            console.error("Google Drive invoice backup warning:", backupErr?.message || backupErr);
+        });
         res.json({message:"Invoice created", invoice});
     }catch(err){
         console.error(err);
@@ -1229,43 +1264,61 @@ exports.sendInvoiceEmail = async (req, res) => {
             if(!Number.isFinite(userId) || userId <= 0){
                 return {};
             }
-            const rs = await db.query(
+            const currentDbRs = await db.query(
                 `SELECT cp.company_name, COALESCE(NULLIF(TRIM(um.mapped_email), ''), cp.email) AS email
                  FROM user_mappings um
                  JOIN company_profiles cp ON cp.id = um.company_profile_id
                  WHERE um.user_id = $1
+                   AND LOWER(um.database_name) = LOWER($2)
+                 ORDER BY um."updatedAt" DESC NULLS LAST, um.id DESC
+                 LIMIT 1`,
+                { bind: [userId, currentDbName] }
+            );
+            const currentRows = Array.isArray(currentDbRs?.[0]) ? currentDbRs[0] : [];
+            if(currentRows.length){
+                return {
+                    company_name: String(currentRows[0]?.company_name || "").trim(),
+                    email: String(currentRows[0]?.email || "").trim().toLowerCase(),
+                };
+            }
+
+            const fallbackRs = await db.query(
+                `SELECT cp.company_name, COALESCE(NULLIF(TRIM(um.mapped_email), ''), cp.email) AS email
+                 FROM user_mappings um
+                 JOIN company_profiles cp ON cp.id = um.company_profile_id
+                 WHERE um.user_id = $1
+                 ORDER BY um."updatedAt" DESC NULLS LAST, um.id DESC
                  LIMIT 1`,
                 { bind: [userId] }
             );
-            const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
-            if(!rows.length){
+            const fallbackRows = Array.isArray(fallbackRs?.[0]) ? fallbackRs[0] : [];
+            if(!fallbackRows.length){
                 return {};
             }
             return {
-                company_name: String(rows[0]?.company_name || "").trim(),
-                email: String(rows[0]?.email || "").trim().toLowerCase(),
+                company_name: String(fallbackRows[0]?.company_name || "").trim(),
+                email: String(fallbackRows[0]?.email || "").trim().toLowerCase(),
             };
         }).catch(() => ({}));
         const mappedCompanyName = String(mappedProfile?.company_name || "").trim();
         const mappedCompanyEmail = String(mappedProfile?.email || "").trim().toLowerCase();
         const withMappedDefaults = (setupLike) => {
-            const src = setupLike && typeof setupLike.toJSON === "function" ? setupLike.toJSON() : (setupLike || {});
-            const forceMappedBranding = !!mappedCompanyName;
+            const src = toPlainSetup(setupLike);
+            const setupSmtpUser = String(src.smtp_user || "").trim();
+            const setupFromName = String(src.from_name || "").trim();
+            const setupFromEmail = String(src.from_email || "").trim();
+            const setupSubject = String(src.subject_template || "").trim();
+            const setupBody = String(src.body_template || "").trim();
+            const smtpUser = setupSmtpUser || mappedCompanyEmail || null;
+            const fromName = setupFromName || mappedCompanyName || "AXIS PRODUCTION";
+            const fromEmail = setupFromEmail || mappedCompanyEmail || null;
             return {
                 ...src,
-                smtp_user: forceMappedBranding
-                    ? (mappedCompanyEmail || String(src.smtp_user || "").trim() || null)
-                    : (String(src.smtp_user || "").trim() || mappedCompanyEmail || null),
-                from_name: forceMappedBranding
-                    ? mappedCompanyName
-                    : (String(src.from_name || "").trim() || mappedCompanyName || "PULMO TECHNOLOGIES"),
-                from_email: forceMappedBranding
-                    ? (mappedCompanyEmail || String(src.from_email || "").trim() || null)
-                    : (String(src.from_email || "").trim() || mappedCompanyEmail || null),
-                subject_template: forceMappedBranding
-                    ? `Invoice {{invoice_no}} - ${mappedCompanyName}`
-                    : (String(src.subject_template || "").trim() || `Invoice {{invoice_no}} - ${mappedCompanyName || "PULMO TECHNOLOGIES"}`),
-                body_template: String(src.body_template || "").trim() || `Dear {{customer_name}},\n\nPlease find attached your invoice {{invoice_no}}.\n\nThank you.\n${mappedCompanyName || "PULMO TECHNOLOGIES"}`
+                smtp_user: smtpUser,
+                from_name: fromName,
+                from_email: fromEmail,
+                subject_template: setupSubject || `Invoice {{invoice_no}} - ${mappedCompanyName || "AXIS PRODUCTION"}`,
+                body_template: setupBody || `Dear {{customer_name}},\n\nPlease find attached your invoice {{invoice_no}}.\n\nThank you.\n${mappedCompanyName || "AXIS PRODUCTION"}`
             };
         };
         const currentSetup = await EmailSetup.findOne({ order: [["id", "ASC"]] });
@@ -1275,9 +1328,31 @@ exports.sendInvoiceEmail = async (req, res) => {
         const currentSetupResolved = withMappedDefaults(currentSetup);
         const inventorySetupResolved = withMappedDefaults(inventorySetup);
 
+        const mappedOverrideVariant = (setupLike) => {
+            if(!setupLike || !mappedCompanyEmail){
+                return null;
+            }
+            const src = toPlainSetup(setupLike);
+            return {
+                ...src,
+                smtp_user: mappedCompanyEmail,
+                from_email: mappedCompanyEmail,
+                from_name: String(src.from_name || "").trim() || mappedCompanyName || "AXIS PRODUCTION",
+                subject_template: String(src.subject_template || "").trim() || `Invoice {{invoice_no}} - ${mappedCompanyName || "AXIS PRODUCTION"}`,
+                body_template: String(src.body_template || "").trim() || `Dear {{customer_name}},\n\nPlease find attached your invoice {{invoice_no}}.\n\nThank you.\n${mappedCompanyName || "AXIS PRODUCTION"}`
+            };
+        };
+
         const smtpCandidates = [];
         const seen = new Set();
-        [currentSetupResolved, inventorySetupResolved, null].forEach((setupRow) => {
+        [
+            currentSetupResolved,
+            mappedOverrideVariant(currentSetupResolved),
+            inventorySetupResolved,
+            mappedOverrideVariant(inventorySetupResolved),
+            null
+        ].forEach((setupRow) => {
+            if(!setupRow) return;
             const payload = buildSmtpPayload(setupRow);
             if(!hasSmtpConfig(payload)) return;
             const key = smtpSignature(payload);
@@ -1356,20 +1431,23 @@ exports.sendInvoiceEmail = async (req, res) => {
             invoice_no: String(invoice.invoice_no || ""),
             customer_name: String(customer.name || "Customer"),
             total_amount: Number(invoice.total_amount || 0).toFixed(2),
-            invoice_date: new Date(invoice.invoice_date || invoice.createdAt || Date.now()).toLocaleDateString("en-GB")
+            invoice_date: new Date(invoice.invoice_date || invoice.createdAt || Date.now()).toLocaleDateString("en-GB"),
+            quotation_no: String(invoice.invoice_no || ""),
+            quotation_amount: Number(invoice.total_amount || 0).toFixed(2),
+            quotation_date: new Date(invoice.quotation_date || invoice.invoice_date || invoice.createdAt || Date.now()).toLocaleDateString("en-GB")
         };
 
         const templateSetup = currentSetupResolved || inventorySetupResolved || null;
         const defaultSubjectTemplate = isQuotation23Email
-            ? "Quotation 2/3 {{invoice_no}} - PULMO TECHNOLOGIES"
+            ? "Quotation 2/3 {{invoice_no}} - AXIS PRODUCTION"
             : (isQuotationEmail
-                ? "Quotation {{invoice_no}} - PULMO TECHNOLOGIES"
-                : "Invoice {{invoice_no}} - PULMO TECHNOLOGIES");
+                ? "Quotation {{invoice_no}} - AXIS PRODUCTION"
+                : "Invoice {{invoice_no}} - AXIS PRODUCTION");
         const defaultBodyTemplate = isQuotation23Email
-            ? "Dear {{customer_name}},\n\nPlease find attached your Quotation 2 and Quotation 3 for reference {{invoice_no}}.\n\nThank you.\nPULMO TECHNOLOGIES"
+            ? "Dear {{customer_name}},\n\nPlease find attached your Quotation 2 and Quotation 3 for reference {{invoice_no}}.\n\nThank you.\nAXIS PRODUCTION"
             : (isQuotationEmail
-                ? "Dear {{customer_name}},\n\nPlease find attached your Quotation for reference {{invoice_no}}.\n\nThank you.\nPULMO TECHNOLOGIES"
-                : "Dear {{customer_name}},\n\nPlease find attached your invoice {{invoice_no}}.\n\nThank you.\nPULMO TECHNOLOGIES");
+                ? "Dear {{customer_name}},\n\nPlease find attached your Quotation for reference {{invoice_no}}.\n\nThank you.\nAXIS PRODUCTION"
+                : "Dear {{customer_name}},\n\nPlease find attached your invoice {{invoice_no}}.\n\nThank you.\nAXIS PRODUCTION");
 
         const subjectTemplate = isAnyQuotationEmail
             ? defaultSubjectTemplate
@@ -1409,7 +1487,11 @@ exports.sendInvoiceEmail = async (req, res) => {
             }
         }
         if(!sent){
-            throw lastAuthError || new Error("Failed to send invoice email.");
+            if(lastAuthError){
+                const tried = smtpCandidates.map((c) => smtpCandidateLabel(c)).join(" | ");
+                throw new Error(`${lastAuthError.message} Tried: ${tried}`);
+            }
+            throw new Error("Failed to send invoice email.");
         }
 
         const successLabel = isQuotation23Email

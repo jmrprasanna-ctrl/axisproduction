@@ -27,6 +27,8 @@ const RentalMachineConsumable = require("./models/RentalMachineConsumable");
 const RentalMachineCount = require("./models/RentalMachineCount");
 const Technician = require("./models/Technician");
 const SupportImportant = require("./models/SupportImportant");
+const SupportTechPay = require("./models/SupportTechPay");
+const ServiceRecord = require("./models/ServiceRecord");
 const CategoryModelOption = require("./models/CategoryModelOption");
 const UiSetting = require("./models/UiSetting");
 const EmailSetup = require("./models/EmailSetup");
@@ -54,11 +56,14 @@ const rentalMachineConsumableRoutes = require("./routes/rentalMachineConsumableR
 const rentalMachineCountRoutes = require("./routes/rentalMachineCountRoutes");
 const technicianRoutes = require("./routes/technicianRoutes");
 const supportImportantRoutes = require("./routes/supportImportantRoutes");
+const supportTechPayRoutes = require("./routes/supportTechPayRoutes");
+const serviceRecordRoutes = require("./routes/serviceRecordRoutes");
 const categoryModelOptionRoutes = require("./routes/categoryModelOptionRoutes");
 const uiSettingsRoutes = require("./routes/uiSettingsRoutes");
 const emailSetupRoutes = require("./routes/emailSetupRoutes");
 const systemBackupRoutes = require("./routes/systemBackupRoutes");
 const preferenceRoutes = require("./routes/preferenceRoutes");
+const hrRoutes = require("./routes/hrRoutes");
 
 const authRoutes = require("./routes/authRoutes");                          
 const userRoutes = require("./routes/userRoutes");                              
@@ -200,7 +205,7 @@ async function ensureDefaultUiSettings() {
     const first = await UiSetting.findOne({ order: [["id", "ASC"]] });
     if (!first) {
       await UiSetting.create({
-        app_name: "PULMO TECHNOLOGIES",
+        app_name: "AXIS PRODUCTION",
         footer_text: "Copyright © 2025 Powered by CRONIT SOLLUTIONS, All Right Received.",
         primary_color: "#0f6abf",
         accent_color: "#11a36f",
@@ -209,8 +214,9 @@ async function ensureDefaultUiSettings() {
     }
 
     const currentAppName = String(first.app_name || "").trim().toLowerCase();
-    if (currentAppName === "pulmotech_inhouse" || currentAppName === "ulmotech_inhouse") {
-      await first.update({ app_name: "PULMO TECHNOLOGIES" });
+    const isLegacyAppName = currentAppName === "axis_production" || currentAppName.includes("inhouse");
+    if (isLegacyAppName) {
+      await first.update({ app_name: "AXIS PRODUCTION" });
     }
   });
 }
@@ -605,6 +611,143 @@ async function ensureSupportImportantSchema() {
   });
 }
 
+async function ensureSupportTechPaySchema() {
+  await runOnBusinessDatabases(async () => {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS support_tech_pays (
+        id SERIAL PRIMARY KEY,
+        invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        vendor_pay_amount DOUBLE PRECISION DEFAULT 0,
+        support_tech_pay_amount DOUBLE PRECISION DEFAULT 0,
+        payment_method VARCHAR(30) DEFAULT 'Cash',
+        payment_status VARCHAR(30) DEFAULT 'Pending',
+        payment_proof_image_path VARCHAR(500),
+        payment_proof_pdf_path VARCHAR(500),
+        paid_at DATE,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP DEFAULT NOW(),
+        UNIQUE(invoice_id)
+      );
+    `);
+
+    await db.query(`
+      ALTER TABLE support_tech_pays
+      ADD COLUMN IF NOT EXISTS vendor_pay_amount DOUBLE PRECISION DEFAULT 0;
+    `);
+    await db.query(`
+      ALTER TABLE support_tech_pays
+      ADD COLUMN IF NOT EXISTS support_tech_pay_amount DOUBLE PRECISION DEFAULT 0;
+    `);
+    await db.query(`
+      ALTER TABLE support_tech_pays
+      ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30) DEFAULT 'Cash';
+    `);
+    await db.query(`
+      ALTER TABLE support_tech_pays
+      ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) DEFAULT 'Pending';
+    `);
+    await db.query(`
+      ALTER TABLE support_tech_pays
+      ADD COLUMN IF NOT EXISTS payment_proof_image_path VARCHAR(500);
+    `);
+    await db.query(`
+      ALTER TABLE support_tech_pays
+      ADD COLUMN IF NOT EXISTS payment_proof_pdf_path VARCHAR(500);
+    `);
+    await db.query(`
+      ALTER TABLE support_tech_pays
+      ADD COLUMN IF NOT EXISTS paid_at DATE;
+    `);
+
+    await db.query(`
+      UPDATE support_tech_pays
+      SET payment_status = 'Paid'
+      WHERE LOWER(COALESCE(payment_status, '')) = 'paid';
+    `);
+    await db.query(`
+      UPDATE support_tech_pays
+      SET payment_status = 'Pending'
+      WHERE payment_status IS NULL OR TRIM(payment_status) = '' OR LOWER(payment_status) <> 'paid';
+    `);
+
+    await db.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS support_tech_pays_invoice_unique_idx
+      ON support_tech_pays(invoice_id);
+    `);
+  });
+}
+
+async function ensureServiceRecordSchema() {
+  await runOnBusinessDatabases(async () => {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS service_records (
+        id SERIAL PRIMARY KEY,
+        service_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        service_type VARCHAR(20) NOT NULL DEFAULT 'general',
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        customer_name VARCHAR(255),
+        machine_ref_id INTEGER,
+        machine_code VARCHAR(120),
+        machine_title VARCHAR(255),
+        counter_value VARCHAR(120),
+        comment_text TEXT,
+        created_by INTEGER,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS service_date DATE;`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS service_type VARCHAR(20) DEFAULT 'general';`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL;`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255);`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS machine_ref_id INTEGER;`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS machine_code VARCHAR(120);`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS machine_title VARCHAR(255);`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS counter_value VARCHAR(120);`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS comment_text TEXT;`);
+    await db.query(`ALTER TABLE service_records ADD COLUMN IF NOT EXISTS created_by INTEGER;`);
+
+    await db.query(`
+      UPDATE service_records
+      SET service_type = 'general'
+      WHERE service_type IS NULL OR TRIM(service_type) = '';
+    `);
+    await db.query(`
+      UPDATE service_records
+      SET service_type = LOWER(TRIM(service_type))
+      WHERE service_type IS NOT NULL;
+    `);
+    await db.query(`
+      UPDATE service_records
+      SET service_type = 'general'
+      WHERE service_type NOT IN ('general', 'rental');
+    `);
+    await db.query(`
+      UPDATE service_records
+      SET service_date = COALESCE(service_date, DATE("createdAt"), CURRENT_DATE)
+      WHERE service_date IS NULL;
+    `);
+    await db.query(`
+      ALTER TABLE service_records
+      ALTER COLUMN service_date SET DEFAULT CURRENT_DATE;
+    `);
+
+    await db.query(`
+      CREATE INDEX IF NOT EXISTS service_records_date_idx
+      ON service_records(service_date);
+    `);
+    await db.query(`
+      CREATE INDEX IF NOT EXISTS service_records_customer_idx
+      ON service_records(customer_id);
+    `);
+    await db.query(`
+      CREATE INDEX IF NOT EXISTS service_records_type_idx
+      ON service_records(service_type);
+    `);
+  });
+}
+
 async function ensureInvoiceImportantWarrantySchema() {
   await runOnBusinessDatabases(async () => {
     await db.query(`
@@ -764,7 +907,7 @@ async function ensureUserMappingSchema() {
     await db.query(`
       CREATE TABLE IF NOT EXISTS user_mappings (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER UNIQUE NOT NULL,
+        user_id INTEGER NOT NULL,
         company_profile_id INTEGER NOT NULL REFERENCES company_profiles(id) ON DELETE CASCADE,
         database_name VARCHAR(120) NOT NULL,
         mapped_email VARCHAR(200),
@@ -777,6 +920,42 @@ async function ensureUserMappingSchema() {
     await db.query(`
       ALTER TABLE user_mappings
       ADD COLUMN IF NOT EXISTS mapped_email VARCHAR(200);
+    `);
+    await db.query(`
+      UPDATE user_mappings
+      SET database_name = LOWER(TRIM(database_name))
+      WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
+    `);
+    await db.query(`
+      WITH ranked AS (
+        SELECT id,
+               ROW_NUMBER() OVER (
+                 PARTITION BY user_id, LOWER(COALESCE(database_name, ''))
+                 ORDER BY "updatedAt" DESC NULLS LAST, id DESC
+               ) AS rn
+        FROM user_mappings
+      )
+      DELETE FROM user_mappings um
+      USING ranked r
+      WHERE um.id = r.id AND r.rn > 1;
+    `);
+    await db.query(`
+      ALTER TABLE user_mappings
+      DROP CONSTRAINT IF EXISTS user_mappings_user_id_key;
+    `);
+    await db.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'user_mappings_user_db_unique'
+            AND conrelid = 'user_mappings'::regclass
+        ) THEN
+          ALTER TABLE user_mappings
+          ADD CONSTRAINT user_mappings_user_db_unique UNIQUE (user_id, database_name);
+        END IF;
+      END $$;
     `);
   });
 }
@@ -935,6 +1114,53 @@ async function ensureUserPasswordRecoverySchema() {
   });
 }
 
+async function ensureUserDepartmentSchema() {
+  await runOnBusinessDatabases(async () => {
+    await db.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS department VARCHAR(100);
+    `);
+    await db.query(`
+      UPDATE users
+      SET department = CASE
+        WHEN department IS NULL OR TRIM(department) = '' THEN 'Cordinater'
+        WHEN LOWER(REGEXP_REPLACE(TRIM(department), '[^a-z]+', '', 'g')) = 'manager' THEN 'Manager'
+        WHEN LOWER(REGEXP_REPLACE(TRIM(department), '[^a-z]+', '', 'g')) IN ('it', 'informationtechnology', 'informationtech') THEN 'IT'
+        WHEN LOWER(REGEXP_REPLACE(TRIM(department), '[^a-z]+', '', 'g')) IN ('finance', 'finances', 'accounts', 'accounting') THEN 'Finance'
+        WHEN LOWER(REGEXP_REPLACE(TRIM(department), '[^a-z]+', '', 'g')) IN ('admin', 'administrator') THEN 'Admin'
+        WHEN LOWER(REGEXP_REPLACE(TRIM(department), '[^a-z]+', '', 'g')) IN ('cordinater', 'coordinator', 'coordinater', 'cordinator') THEN 'Cordinater'
+        WHEN LOWER(REGEXP_REPLACE(TRIM(department), '[^a-z]+', '', 'g')) IN ('technician', 'tech') THEN 'Technician'
+        ELSE 'Cordinater'
+      END;
+    `);
+    await db.query(`
+      ALTER TABLE users
+      ALTER COLUMN department SET DEFAULT 'Cordinater';
+    `);
+    await db.query(`
+      ALTER TABLE users
+      ALTER COLUMN department SET NOT NULL;
+    `);
+    await db.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'users_department_allowed_chk'
+            AND conrelid = 'users'::regclass
+        ) THEN
+          ALTER TABLE users DROP CONSTRAINT users_department_allowed_chk;
+        END IF;
+
+        ALTER TABLE users
+        ADD CONSTRAINT users_department_allowed_chk
+        CHECK (department IN ('Manager', 'IT', 'Finance', 'Admin', 'Cordinater', 'Technician'));
+      END $$;
+    `);
+  });
+}
+
              
 app.use(cors());
 app.disable("x-powered-by");
@@ -942,7 +1168,7 @@ app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
                                                                                         
   res.setHeader(
     "Content-Security-Policy",
@@ -953,6 +1179,12 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({extended:true}));
 app.use("/storage", express.static(path.resolve(__dirname, "storage")));
+const frontendRoot = path.resolve(__dirname, "..", "frontend");
+app.use(express.static(frontendRoot));
+app.use("/pages", express.static(path.join(frontendRoot, "pages")));
+app.use("/assets", express.static(path.join(frontendRoot, "assets")));
+app.use("/js", express.static(path.join(frontendRoot, "js")));
+app.use("/css", express.static(path.join(frontendRoot, "css")));
 
          
 app.use("/api/auth", authRoutes);
@@ -977,14 +1209,17 @@ app.use("/api/rental-machine-consumables", rentalMachineConsumableRoutes);
 app.use("/api/rental-machine-counts", rentalMachineCountRoutes);
 app.use("/api/technicians", technicianRoutes);
 app.use("/api/support-importants", supportImportantRoutes);
+app.use("/api/support-tech-pay", supportTechPayRoutes);
+app.use("/api/services", serviceRecordRoutes);
 app.use("/api/category-model-options", categoryModelOptionRoutes);
 app.use("/api/ui-settings", uiSettingsRoutes);
 app.use("/api/email-setup", emailSetupRoutes);
 app.use("/api/system-backup", systemBackupRoutes);
 app.use("/api/preferences", preferenceRoutes);
+app.use("/api/hr", hrRoutes);
 
              
-app.get("/",(req,res)=>res.send("PULMO TECHNOLOGIES is running"));
+app.get("/", (_req, res) => res.redirect("/pages/login.html"));
 app.get("/api/health", (_req, res) => {
   const statusCode = appHealth.ok ? 200 : 503;
   res.status(statusCode).json({
@@ -1034,10 +1269,13 @@ async function startServer() {
     await ensureUserQuotationRenderSettingsSchema();
     await ensureUserSuperSchema();
     await ensureUserPasswordRecoverySchema();
+    await ensureUserDepartmentSchema();
     await ensureInvoiceDateSchema();
     await ensureInvoiceNumberingSchema();
     await ensureInvoicePaymentSchema();
     await ensureSupportImportantSchema();
+    await ensureSupportTechPaySchema();
+    await ensureServiceRecordSchema();
     await ensureInvoiceImportantWarrantySchema();
     await ensureDefaultCategories();
     await ensureDefaultCategoryModelOptions();

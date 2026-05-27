@@ -10,13 +10,13 @@ const EmailSetup = db.define(
     smtp_secure: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     smtp_user: { type: DataTypes.STRING, allowNull: true },
     smtp_pass: { type: DataTypes.STRING, allowNull: true },
-    from_name: { type: DataTypes.STRING, allowNull: true, defaultValue: "PULMO TECHNOLOGIES" },
+    from_name: { type: DataTypes.STRING, allowNull: true, defaultValue: "AXIS PRODUCTION" },
     from_email: { type: DataTypes.STRING, allowNull: true },
-    subject_template: { type: DataTypes.STRING, allowNull: true, defaultValue: "Invoice {{invoice_no}} - PULMO TECHNOLOGIES" },
+    subject_template: { type: DataTypes.STRING, allowNull: true, defaultValue: "Invoice {{invoice_no}} - AXIS PRODUCTION" },
     body_template: {
       type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: "Dear {{customer_name}},\n\nPlease find attached your invoice {{invoice_no}}.\n\nThank you.\nPULMO TECHNOLOGIES"
+      defaultValue: "Dear {{customer_name}},\n\nPlease find attached your invoice {{invoice_no}}.\n\nThank you.\nAXIS PRODUCTION"
     },
     createdAt: { type: DataTypes.DATE, allowNull: true, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, allowNull: true, defaultValue: DataTypes.NOW }

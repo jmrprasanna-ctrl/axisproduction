@@ -1,0 +1,1856 @@
+const db = require("../config/database");
+const EmailSetup = require("../models/EmailSetup");
+const { sendEmail } = require("../services/emailService");
+
+const ensuredInOutTableDbs = new Set();
+const ensuredSallaryTableDbs = new Set();
+const ensuredLeaveTableDbs = new Set();
+const INVENTORY_DB_NAME = "inventory";
+const TIMESHEET_ACCESS_PATH = "/hr/time-sheet.html";
+
+const SALLARY_BANK_OPTIONS = new Set([
+  "Commercial Bank",
+  "Peoples Bank",
+  "Bank of Ceylon",
+  "Sampath Bank",
+  "Seylan Bank",
+  "Nation Trust Bank",
+  "NDB",
+  "HNB",
+  "NSB",
+  "OTHER",
+]);
+
+const USER_ROLE_ALIASES = new Set([
+  "user",
+  "coordinator",
+  "cordinator",
+  "co-ordinator",
+  "co ordinator",
+  "co_ordinator",
+]);
+
+async function ensureInOutLogTable() {
+  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "inventory";
+  if (ensuredInOutTableDbs.has(dbName)) return;
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS user_inout_logs (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      username VARCHAR(200) NOT NULL,
+      role VARCHAR(40),
+      check_in_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      check_in_lat DOUBLE PRECISION,
+      check_in_lng DOUBLE PRECISION,
+      check_in_accuracy DOUBLE PRECISION,
+      check_in_location_label VARCHAR(120),
+      check_out_at TIMESTAMP,
+      check_out_lat DOUBLE PRECISION,
+      check_out_lng DOUBLE PRECISION,
+      check_out_accuracy DOUBLE PRECISION,
+      check_out_location_label VARCHAR(120),
+      createdAt TIMESTAMP DEFAULT NOW(),
+      updatedAt TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await db.query(`
+    ALTER TABLE user_inout_logs
+    ADD COLUMN IF NOT EXISTS check_in_location_label VARCHAR(120);
+  `);
+  await db.query(`
+    ALTER TABLE user_inout_logs
+    ADD COLUMN IF NOT EXISTS check_out_location_label VARCHAR(120);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS user_inout_logs_user_date_idx
+    ON user_inout_logs(user_id, check_in_at);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS user_inout_logs_open_idx
+    ON user_inout_logs(user_id, check_out_at);
+  `);
+
+  ensuredInOutTableDbs.add(dbName);
+}
+
+async function ensureSallaryProfileTable() {
+  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "inventory";
+  if (ensuredSallaryTableDbs.has(dbName)) return;
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS user_profiles (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      profile_name VARCHAR(200),
+      address TEXT,
+      mobile VARCHAR(60),
+      id_number VARCHAR(120),
+      emergency_contact_no VARCHAR(60),
+      authoris_officer VARCHAR(200),
+      profile_picture_path VARCHAR(500),
+      "createdAt" TIMESTAMP DEFAULT NOW(),
+      "updatedAt" TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await db.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS profile_name VARCHAR(200);`);
+  await db.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS address TEXT;`);
+  await db.query(`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS mobile VARCHAR(60);`);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS user_sallary_profiles (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      username VARCHAR(200) NOT NULL,
+      role VARCHAR(40),
+      profile_name VARCHAR(200),
+      department VARCHAR(160),
+      email VARCHAR(200),
+      mobile VARCHAR(60),
+      address TEXT,
+      bank_name VARCHAR(120),
+      other_bank_name VARCHAR(160),
+      bank_account VARCHAR(120),
+      basic_sallary NUMERIC(14,2) NOT NULL DEFAULT 0,
+      allowances_json TEXT NOT NULL DEFAULT '[]',
+      "createdAt" TIMESTAMP DEFAULT NOW(),
+      "updatedAt" TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS username VARCHAR(200);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS role VARCHAR(40);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS profile_name VARCHAR(200);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS department VARCHAR(160);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS email VARCHAR(200);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS mobile VARCHAR(60);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS address TEXT;`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS bank_name VARCHAR(120);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS other_bank_name VARCHAR(160);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS bank_account VARCHAR(120);`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS basic_sallary NUMERIC(14,2) NOT NULL DEFAULT 0;`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS salary_start_date DATE;`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS salary_end_date DATE;`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS working_days NUMERIC(8,2) NOT NULL DEFAULT 0;`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS ot_pay_amount NUMERIC(14,2) NOT NULL DEFAULT 0;`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS superior_user_id INTEGER;`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS allowances_json TEXT NOT NULL DEFAULT '[]';`);
+  await db.query(`ALTER TABLE user_sallary_profiles ADD COLUMN IF NOT EXISTS deductions_json TEXT NOT NULL DEFAULT '[]';`);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS user_sallary_profiles_profile_name_idx
+    ON user_sallary_profiles (LOWER(COALESCE(profile_name, '')));
+  `);
+
+  ensuredSallaryTableDbs.add(dbName);
+}
+
+async function ensureLeaveTable() {
+  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "inventory";
+  if (ensuredLeaveTableDbs.has(dbName)) return;
+
+  await ensureSallaryProfileTable();
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS user_leave_requests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      username VARCHAR(200) NOT NULL,
+      role VARCHAR(40),
+      profile_name VARCHAR(200),
+      supirior_user_id INTEGER,
+      supirior_name VARCHAR(200),
+      leave_type VARCHAR(20) NOT NULL,
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      reason TEXT,
+      status VARCHAR(40) NOT NULL DEFAULT 'Pending',
+      "createdAt" TIMESTAMP DEFAULT NOW(),
+      "updatedAt" TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS username VARCHAR(200);`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS role VARCHAR(40);`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS profile_name VARCHAR(200);`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS supirior_user_id INTEGER;`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS supirior_name VARCHAR(200);`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS leave_type VARCHAR(20);`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS start_date DATE;`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS end_date DATE;`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS reason TEXT;`);
+  await db.query(`ALTER TABLE user_leave_requests ADD COLUMN IF NOT EXISTS status VARCHAR(40) NOT NULL DEFAULT 'Pending';`);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS user_leave_requests_user_date_idx
+    ON user_leave_requests (user_id, start_date, end_date);
+  `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS user_leave_requests_type_idx
+    ON user_leave_requests (leave_type);
+  `);
+
+  ensuredLeaveTableDbs.add(dbName);
+}
+
+function normalizeLeaveType(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  if (raw.includes("half")) return "half";
+  if (raw.includes("full")) return "full";
+  return "";
+}
+
+function resolveCurrentMonthRange() {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const start = new Date(Date.UTC(year, month, 1));
+  const end = new Date(Date.UTC(year, month + 1, 1));
+  return {
+    month: start.toISOString().slice(0, 7),
+    startDate: start.toISOString().slice(0, 10),
+    endDateExclusive: end.toISOString().slice(0, 10),
+  };
+}
+
+async function getLeaveUserRow(userId) {
+  const rs = await db.query(
+    `SELECT u.id AS user_id,
+            u.username,
+            u.role,
+            COALESCE(NULLIF(TRIM(up.profile_name), ''), u.username) AS profile_name,
+            sp.superior_user_id,
+            su.username AS superior_username
+     FROM users u
+     LEFT JOIN user_profiles up ON up.user_id = u.id
+     LEFT JOIN user_sallary_profiles sp ON sp.user_id = u.id
+     LEFT JOIN users su ON su.id = sp.superior_user_id
+     WHERE u.id = $1
+     LIMIT 1`,
+    { bind: [userId] }
+  );
+  const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+  return rows[0] || null;
+}
+
+async function getLeaveTilesForMonth(userId, startDate, endDateExclusive) {
+  const rs = await db.query(
+    `SELECT
+       COALESCE(
+         SUM(
+           CASE
+             WHEN LOWER(COALESCE(leave_type, '')) = 'full'
+               THEN GREATEST(((end_date - start_date) + 1), 0)
+             ELSE 0
+           END
+         ),
+         0
+       )::NUMERIC AS full_leave_days,
+       COALESCE(
+         SUM(
+           CASE
+             WHEN LOWER(COALESCE(leave_type, '')) = 'half' THEN 1
+             ELSE 0
+           END
+         ),
+         0
+       )::NUMERIC AS half_day_leave_count
+     FROM user_leave_requests
+     WHERE user_id = $1
+       AND start_date < $3::date
+       AND end_date >= $2::date`,
+    { bind: [userId, startDate, endDateExclusive] }
+  );
+  const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+  const row = rows[0] || {};
+  return {
+    full_leave_days: normalizeBasicSallary(row.full_leave_days),
+    half_day_leave_count: normalizeBasicSallary(row.half_day_leave_count),
+  };
+}
+
+function parseAllowances(raw) {
+  let list = [];
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    } catch (_err) {
+      list = [];
+    }
+  }
+
+  const normalized = [];
+  list.forEach((entry, index) => {
+    const name = String(entry?.name ?? entry?.label ?? "").trim().slice(0, 120);
+    const amountRaw = Number(entry?.amount ?? entry?.value ?? 0);
+    const amount = Number.isFinite(amountRaw) ? Number(amountRaw.toFixed(2)) : 0;
+    if (!name && amount <= 0) return;
+    normalized.push({
+      name: name || `Allowance ${index + 1}`,
+      amount: Math.max(0, amount),
+    });
+  });
+
+  return normalized;
+}
+
+function parseStoredAllowances(rawJson) {
+  try {
+    const parsed = JSON.parse(String(rawJson || "[]"));
+    return parseAllowances(parsed);
+  } catch (_err) {
+    return [];
+  }
+}
+
+function parseStoredDeductions(rawJson) {
+  return parseStoredAllowances(rawJson);
+}
+
+function normalizeBasicSallary(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Number(parsed.toFixed(2)));
+}
+
+function normalizeBankName(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  if (SALLARY_BANK_OPTIONS.has(trimmed)) return trimmed;
+  return "OTHER";
+}
+
+function canViewAllSallaryUsers(role) {
+  const normalized = String(role || "").trim().toLowerCase();
+  return normalized === "admin" || normalized === "manager";
+}
+
+async function getSallaryUserRow(userId) {
+  const rs = await db.query(
+    `SELECT u.id AS user_id,
+            u.username,
+            u.role,
+            u.department,
+            u.email,
+            COALESCE(NULLIF(TRIM(up.profile_name), ''), u.username) AS profile_name,
+            COALESCE(NULLIF(TRIM(up.mobile), ''), NULLIF(TRIM(u.telephone), ''), '') AS mobile,
+            COALESCE(NULLIF(TRIM(up.address), ''), '') AS address,
+            COALESCE(NULLIF(TRIM(up.id_number), ''), '') AS employee_no,
+            sp.bank_name,
+            sp.other_bank_name,
+            sp.bank_account,
+            sp.basic_sallary,
+            sp.salary_start_date,
+            sp.salary_end_date,
+            sp.working_days,
+            sp.ot_pay_amount,
+            sp.superior_user_id,
+            su.username AS superior_username,
+            su.role AS superior_role,
+            sp.allowances_json,
+            sp.deductions_json
+     FROM users u
+     LEFT JOIN user_profiles up ON up.user_id = u.id
+     LEFT JOIN user_sallary_profiles sp ON sp.user_id = u.id
+     LEFT JOIN users su ON su.id = sp.superior_user_id
+     WHERE u.id = $1
+     LIMIT 1`,
+    { bind: [userId] }
+  );
+  const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+  return rows[0] || null;
+}
+
+function toNullableFloat(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toLocationLabel(value, fallback = "") {
+  const raw = String(value || "").trim();
+  if (raw) return raw.slice(0, 120);
+  const normalizedFallback = String(fallback || "").trim();
+  return normalizedFallback ? normalizedFallback.slice(0, 120) : null;
+}
+
+function normalizeDateOnly(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return "";
+  return raw;
+}
+
+function toPositiveIntOrNull(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  const asInt = Math.trunc(parsed);
+  return asInt > 0 ? asInt : null;
+}
+
+function normalizeRoleValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function canAssignSupirorRole(requesterRole, supirorRole) {
+  const requester = normalizeRoleValue(requesterRole);
+  const target = normalizeRoleValue(supirorRole);
+  if (!target) return false;
+  if (requester === "admin") return true;
+  if (requester === "manager") return target === "admin";
+  if (requester === "user") return target === "admin" || target === "manager";
+  return false;
+}
+
+function toIsoDateUtc(value) {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+function resolveFixedSallaryCycle(anchorValue) {
+  const anchor = anchorValue ? new Date(anchorValue) : new Date();
+  const base = Number.isNaN(anchor.getTime()) ? new Date() : anchor;
+  const year = base.getUTCFullYear();
+  const month = base.getUTCMonth();
+  const day = base.getUTCDate();
+
+  let startYear = year;
+  let startMonth = month;
+  let endYear = year;
+  let endMonth = month;
+
+  if (day >= 20) {
+    if (month === 11) {
+      endYear = year + 1;
+      endMonth = 0;
+    } else {
+      endMonth = month + 1;
+    }
+  } else if (month === 0) {
+    startYear = year - 1;
+    startMonth = 11;
+  } else {
+    startMonth = month - 1;
+  }
+
+  const startDate = new Date(Date.UTC(startYear, startMonth, 20));
+  const endDate = new Date(Date.UTC(endYear, endMonth, 20));
+  return {
+    start_date: toIsoDateUtc(startDate),
+    end_date: toIsoDateUtc(endDate),
+  };
+}
+
+function parseMonthRange(monthRaw) {
+  const raw = String(monthRaw || "").trim();
+  const month = /^\d{4}-\d{2}$/.test(raw) ? raw : new Date().toISOString().slice(0, 7);
+  const [y, m] = month.split("-").map((x) => Number(x));
+  const start = new Date(Date.UTC(y, m - 1, 1));
+  const end = new Date(Date.UTC(y, m, 1));
+  return {
+    month,
+    startIso: start.toISOString().slice(0, 10),
+    endIso: end.toISOString().slice(0, 10),
+  };
+}
+
+function normalizeUserDatabaseName(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return INVENTORY_DB_NAME;
+  if (!/^[a-z0-9_]+$/.test(normalized)) return INVENTORY_DB_NAME;
+  return normalized;
+}
+
+function toAccessActionKey(path, action) {
+  return `${String(path || "").trim().toLowerCase()}::${String(action || "").trim().toLowerCase()}`;
+}
+
+function parseAllowedActionsFromAccessRow(row) {
+  try {
+    const parsed = JSON.parse(String(row?.allowed_actions_json || "[]"));
+    if (!Array.isArray(parsed)) return [];
+    return Array.from(
+      new Set(
+        parsed
+          .map((entry) => String(entry || "").trim().toLowerCase())
+          .filter((entry) => entry.includes("::"))
+      )
+    );
+  } catch (_err) {
+    return [];
+  }
+}
+
+async function findAccessRowFromInventory(userId, userDatabase = INVENTORY_DB_NAME) {
+  const normalizedDb = normalizeUserDatabaseName(userDatabase);
+  return db.withDatabase(INVENTORY_DB_NAME, async () => {
+    try {
+      const rs = await db.query(
+        `SELECT id, allowed_actions_json, user_database, "updatedAt", "createdAt"
+         FROM user_accesses
+         WHERE user_id = $1
+           AND LOWER(COALESCE(user_database, $2)) = $2
+         ORDER BY "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC
+         LIMIT 1`,
+        { bind: [userId, normalizedDb] }
+      );
+      const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+      return rows[0] || null;
+    } catch (_err) {
+      return null;
+    }
+  });
+}
+
+async function canEditTimesheetDates(req, targetUserId = null) {
+  const requesterRole = normalizeAccessRole(req.user?.role);
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) return false;
+  if (requesterRole !== "admin" && requesterRole !== "manager" && requesterRole !== "user") return false;
+
+  const resolvedTargetUserId = Number(targetUserId || requesterUserId);
+  if (requesterRole === "user" && resolvedTargetUserId !== requesterUserId) return false;
+
+  const userDatabase = normalizeUserDatabaseName(req.databaseName || req.user?.database_name || INVENTORY_DB_NAME);
+  let accessRow = await findAccessRowFromInventory(requesterUserId, userDatabase);
+  if (!accessRow && userDatabase !== INVENTORY_DB_NAME) {
+    accessRow = await findAccessRowFromInventory(requesterUserId, INVENTORY_DB_NAME);
+  }
+
+  if (!accessRow) {
+    return requesterRole === "admin" || requesterRole === "manager";
+  }
+
+  const actionKey = toAccessActionKey(TIMESHEET_ACCESS_PATH, "edit");
+  const allowedActions = parseAllowedActionsFromAccessRow(accessRow);
+  return allowedActions.includes(actionKey);
+}
+
+function normalizeDateTimeMinute(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const normalized = raw.replace(" ", "T");
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(normalized)) return "";
+  const withSeconds = normalized.length === 16 ? `${normalized}:00` : normalized;
+  const parsed = new Date(withSeconds);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return withSeconds;
+}
+
+function normalizeAccessRole(role) {
+  const raw = String(role || "").trim().toLowerCase();
+  if (raw === "admin") return "admin";
+  if (raw === "manager") return "manager";
+  if (USER_ROLE_ALIASES.has(raw)) return "user";
+  return "user";
+}
+
+function canRequesterViewPayslipTarget(requesterRole, requesterUserId, targetUserId, targetRole) {
+  const requester = normalizeAccessRole(requesterRole);
+  const target = normalizeAccessRole(targetRole);
+  if (requester === "admin") return true;
+  if (requester === "manager") {
+    return target === "manager" || target === "user";
+  }
+  return Number(requesterUserId || 0) === Number(targetUserId || 0);
+}
+
+async function getPayslipVisibleUsers(requesterRole, requesterUserId) {
+  await ensureSallaryProfileTable();
+  const rs = await db.query(
+    `SELECT u.id AS user_id,
+            u.username,
+            u.role,
+            u.email,
+            u.department,
+            COALESCE(NULLIF(TRIM(up.profile_name), ''), u.username) AS profile_name,
+            COALESCE(NULLIF(TRIM(up.id_number), ''), '') AS employee_no,
+            COALESCE(sp.basic_sallary, 0) AS basic_sallary
+     FROM users u
+     LEFT JOIN user_profiles up ON up.user_id = u.id
+     LEFT JOIN user_sallary_profiles sp ON sp.user_id = u.id
+     ORDER BY LOWER(COALESCE(NULLIF(TRIM(up.profile_name), ''), u.username)) ASC, u.id ASC`
+  );
+  const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+  return rows
+    .map((row) => ({
+      user_id: Number(row.user_id || 0),
+      username: String(row.username || "").trim(),
+      role: String(row.role || "").trim(),
+      email: String(row.email || "").trim(),
+      department: String(row.department || "").trim(),
+      profile_name: String(row.profile_name || "").trim() || String(row.username || "").trim(),
+      employee_no: String(row.employee_no || "").trim(),
+      basic_sallary: normalizeBasicSallary(row.basic_sallary),
+    }))
+    .filter((row) =>
+      Number.isFinite(row.user_id)
+      && row.user_id > 0
+      && canRequesterViewPayslipTarget(requesterRole, requesterUserId, row.user_id, row.role)
+    );
+}
+
+function toMonthLabel(monthValue) {
+  const raw = String(monthValue || "").trim();
+  if (!/^\d{4}-\d{2}$/.test(raw)) return raw || "Month";
+  const [year, month] = raw.split("-").map((x) => Number(x));
+  const date = new Date(Date.UTC(year, month - 1, 1));
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+function toDateWithDelta(dateIso, deltaDays) {
+  const base = new Date(`${String(dateIso || "").trim()}T00:00:00Z`);
+  if (Number.isNaN(base.getTime())) return "";
+  base.setUTCDate(base.getUTCDate() + Number(deltaDays || 0));
+  return base.toISOString().slice(0, 10);
+}
+
+async function getWorkSummaryByRange(userId, startDate, endDateInclusive) {
+  await ensureInOutLogTable();
+  const rs = await db.query(
+    `WITH filtered AS (
+       SELECT DATE(check_in_at) AS log_date,
+              CASE
+                WHEN check_out_at IS NULL THEN 0
+                ELSE GREATEST(EXTRACT(EPOCH FROM (check_out_at - check_in_at)) / 3600.0, 0)
+              END AS duration_hours
+       FROM user_inout_logs
+       WHERE user_id = $1
+         AND DATE(check_in_at) >= $2
+         AND DATE(check_in_at) <= $3
+     ),
+     per_day AS (
+       SELECT log_date, SUM(duration_hours) AS day_hours
+       FROM filtered
+       GROUP BY log_date
+     )
+     SELECT COALESCE(ROUND(SUM(day_hours)::numeric, 2), 0) AS total_working_hours,
+            COALESCE(ROUND(SUM(CASE WHEN day_hours > 8 THEN day_hours - 8 ELSE 0 END)::numeric, 2), 0) AS total_ot_hours,
+            COALESCE(ROUND(SUM(LEAST(day_hours, 8) / 8.0)::numeric, 2), 0) AS calculated_working_days,
+            COUNT(*)::INTEGER AS present_days
+     FROM per_day`,
+    { bind: [userId, startDate, endDateInclusive] }
+  );
+  const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+  const row = rows[0] || {};
+  return {
+    present_days: Number(row.present_days || 0),
+    calculated_working_days: normalizeBasicSallary(row.calculated_working_days),
+    total_working_hours: normalizeBasicSallary(row.total_working_hours),
+    total_ot_hours: normalizeBasicSallary(row.total_ot_hours),
+  };
+}
+
+async function getLeaveSummaryByRange(userId, startDate, endDateExclusive) {
+  await ensureLeaveTable();
+  const rs = await db.query(
+    `SELECT
+       COALESCE(
+         SUM(
+           CASE
+             WHEN LOWER(COALESCE(leave_type, '')) = 'full'
+               THEN GREATEST(((end_date - start_date) + 1), 0)
+             ELSE 0
+           END
+         ),
+         0
+       )::NUMERIC AS full_leave_days,
+       COALESCE(
+         SUM(
+           CASE
+             WHEN LOWER(COALESCE(leave_type, '')) = 'half' THEN 1
+             ELSE 0
+           END
+         ),
+         0
+       )::NUMERIC AS half_day_leave_count
+     FROM user_leave_requests
+     WHERE user_id = $1
+       AND start_date < $3::date
+       AND end_date >= $2::date`,
+    { bind: [userId, startDate, endDateExclusive] }
+  );
+  const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+  const row = rows[0] || {};
+  return {
+    full_leave_days: normalizeBasicSallary(row.full_leave_days),
+    half_day_leave_count: normalizeBasicSallary(row.half_day_leave_count),
+  };
+}
+
+function parseBase64PdfAttachment(fileDataBase64) {
+  const raw = String(fileDataBase64 || "").trim();
+  if (!raw) return null;
+
+  let payload = raw;
+  const dataUrlMatch = raw.match(/^data:application\/pdf(?:;[^,]*)?;base64,(.+)$/i);
+  if (dataUrlMatch) {
+    payload = String(dataUrlMatch[1] || "");
+  }
+  const buffer = Buffer.from(payload, "base64");
+  if (!buffer.length) {
+    throw new Error("Generated payslip PDF is empty.");
+  }
+  if (buffer.slice(0, 4).toString("utf8") !== "%PDF") {
+    throw new Error("Invalid payslip PDF attachment.");
+  }
+  return buffer;
+}
+
+function buildSmtpPayload(setup) {
+  const smtpHost = String(setup?.smtp_host || process.env.SMTP_HOST || "").trim();
+  const smtpPort = Number(setup?.smtp_port || process.env.SMTP_PORT || 587);
+  const smtpSecure = !!(setup?.smtp_secure || String(process.env.SMTP_SECURE || "").toLowerCase() === "true");
+  const smtpUser = String(setup?.smtp_user || process.env.SMTP_USER || "").trim();
+  const smtpPass = String(setup?.smtp_pass || process.env.SMTP_PASS || "").trim();
+  const fromName = String(setup?.from_name || "AXIS PRODUCTION").trim() || "AXIS PRODUCTION";
+  const fromEmail = String(setup?.from_email || smtpUser || process.env.SMTP_FROM || "").trim();
+  const from = fromEmail.includes("<")
+    ? fromEmail
+    : `"${fromName}" <${fromEmail || "noreply@company.com"}>`;
+
+  return {
+    smtpConfig: {
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      user: smtpUser,
+      pass: smtpPass,
+    },
+    from,
+  };
+}
+
+function hasSmtpConfig(payload) {
+  const cfg = payload?.smtpConfig || {};
+  return !!String(cfg.host || "").trim()
+    && !!String(cfg.user || "").trim()
+    && !!String(cfg.pass || "").trim();
+}
+
+async function resolveMappedCompanyProfile(req) {
+  const userId = Number(req?.user?.id || req?.user?.userId || 0);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return {
+      company_name: "AXIS PRODUCTION",
+      company_code: "",
+      company_email: "",
+    };
+  }
+
+  try {
+    const result = await db.withDatabase("inventory", async () => {
+      const rs = await db.query(
+        `SELECT cp.company_name,
+                cp.company_code,
+                COALESCE(NULLIF(TRIM(um.mapped_email), ''), cp.email) AS company_email
+         FROM user_mappings um
+         JOIN company_profiles cp ON cp.id = um.company_profile_id
+         WHERE um.user_id = $1
+         LIMIT 1`,
+        { bind: [userId] }
+      );
+      const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+      return rows[0] || null;
+    });
+
+    if (!result) {
+      return {
+        company_name: "AXIS PRODUCTION",
+        company_code: "",
+        company_email: "",
+      };
+    }
+
+    return {
+      company_name: String(result.company_name || "AXIS PRODUCTION").trim() || "AXIS PRODUCTION",
+      company_code: String(result.company_code || "").trim(),
+      company_email: String(result.company_email || "").trim().toLowerCase(),
+    };
+  } catch (_err) {
+    return {
+      company_name: "AXIS PRODUCTION",
+      company_code: "",
+      company_email: "",
+    };
+  }
+}
+
+async function buildPayslipDetailData(targetUserId, monthRange) {
+  const userRow = await getSallaryUserRow(targetUserId);
+  if (!userRow) return null;
+
+  const month = String(monthRange?.month || "").trim();
+  const periodStart = String(monthRange?.startIso || "").trim();
+  const periodEndExclusive = String(monthRange?.endIso || "").trim();
+  const periodEndInclusive = toDateWithDelta(periodEndExclusive, -1);
+
+  const workingSummary = await getWorkSummaryByRange(targetUserId, periodStart, periodEndInclusive);
+  const leaveSummary = await getLeaveSummaryByRange(targetUserId, periodStart, periodEndExclusive);
+
+  const basicSallary = normalizeBasicSallary(userRow.basic_sallary);
+  const allowances = parseStoredAllowances(userRow.allowances_json);
+  const deductions = parseStoredDeductions(userRow.deductions_json);
+  const otPayAmountPerHour = normalizeBasicSallary(userRow.ot_pay_amount);
+  const otHours = normalizeBasicSallary(workingSummary.total_ot_hours);
+  const otPayAmount = normalizeBasicSallary(otPayAmountPerHour * otHours);
+  const noPayAmount = 0;
+  const salaryForMsps = normalizeBasicSallary(Math.max(basicSallary - noPayAmount, 0));
+  const allowancesTotal = normalizeBasicSallary(
+    allowances.reduce((sum, item) => sum + normalizeBasicSallary(item?.amount), 0)
+  );
+  const deductionsTotal = normalizeBasicSallary(
+    deductions.reduce((sum, item) => sum + normalizeBasicSallary(item?.amount), 0)
+  );
+  const additionalTotal = normalizeBasicSallary(allowancesTotal + otPayAmount);
+  const grossPay = normalizeBasicSallary(salaryForMsps + additionalTotal);
+  const netSallary = normalizeBasicSallary(grossPay - deductionsTotal);
+  const companyContMsps = normalizeBasicSallary(salaryForMsps * 0.12);
+  const companyContEtf = normalizeBasicSallary(salaryForMsps * 0.03);
+
+  return {
+    month,
+    month_label: toMonthLabel(month),
+    period_start: periodStart,
+    period_end: periodEndInclusive,
+    user: {
+      user_id: Number(userRow.user_id || 0),
+      username: String(userRow.username || "").trim(),
+      role: String(userRow.role || "").trim(),
+      profile_name: String(userRow.profile_name || "").trim() || String(userRow.username || "").trim(),
+      department: String(userRow.department || "").trim(),
+      email: String(userRow.email || "").trim(),
+      employee_no: String(userRow.employee_no || "").trim(),
+      bank_name: String(userRow.bank_name || "").trim(),
+      bank_account: String(userRow.bank_account || "").trim(),
+    },
+    attendance: {
+      present_days: Number(workingSummary.present_days || 0),
+      working_days: normalizeBasicSallary(workingSummary.calculated_working_days),
+      working_hours: normalizeBasicSallary(workingSummary.total_working_hours),
+      ot_hours: otHours,
+    },
+    leave: {
+      full_leave_days: normalizeBasicSallary(leaveSummary.full_leave_days),
+      half_day_leave_count: normalizeBasicSallary(leaveSummary.half_day_leave_count),
+    },
+    salary: {
+      basic_sallary: basicSallary,
+      no_pay_amount: noPayAmount,
+      salary_for_msps: salaryForMsps,
+      allowances,
+      deductions,
+      ot_pay_per_hour: otPayAmountPerHour,
+      ot_pay_amount: otPayAmount,
+      allowances_total: allowancesTotal,
+      deductions_total: deductionsTotal,
+      gross_pay: grossPay,
+      net_sallary: netSallary,
+      company_cont_msps: companyContMsps,
+      company_cont_etf: companyContEtf,
+    },
+  };
+}
+
+async function getUserName(userId) {
+  const rs = await db.query(
+    `SELECT username FROM users WHERE id = $1 LIMIT 1`,
+    { bind: [userId] }
+  );
+  const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+  return String(rows[0]?.username || "").trim() || `User ${userId}`;
+}
+
+async function getUserIdentity(userId) {
+  const rs = await db.query(
+    `SELECT id, username, role
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
+    { bind: [userId] }
+  );
+  const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+  const row = rows[0] || null;
+  if (!row) return null;
+  return {
+    id: Number(row.id || 0),
+    username: String(row.username || "").trim() || `User ${userId}`,
+    role: String(row.role || "").trim().toLowerCase() || "user",
+  };
+}
+
+exports.getInOutStatus = async (req, res) => {
+  const userId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  try {
+    await ensureInOutLogTable();
+    const latestRs = await db.query(
+      `SELECT id, user_id, username, role, check_in_at, check_in_lat, check_in_lng, check_in_accuracy,
+              check_in_location_label,
+              check_out_at, check_out_lat, check_out_lng, check_out_accuracy, check_out_location_label
+       FROM user_inout_logs
+       WHERE user_id = $1
+       ORDER BY check_in_at DESC, id DESC
+       LIMIT 1`,
+      { bind: [userId] }
+    );
+    const latestRows = Array.isArray(latestRs?.[0]) ? latestRs[0] : [];
+    const latest = latestRows[0] || null;
+
+    const todayRs = await db.query(
+      `SELECT id, check_in_at, check_out_at
+       FROM user_inout_logs
+       WHERE user_id = $1
+         AND DATE(check_in_at) = CURRENT_DATE
+       ORDER BY check_in_at DESC, id DESC
+       LIMIT 1`,
+      { bind: [userId] }
+    );
+    const todayRows = Array.isArray(todayRs?.[0]) ? todayRs[0] : [];
+    const todayLog = todayRows[0] || null;
+    const hasTodayIn = !!todayLog;
+    const hasTodayOut = !!(todayLog && todayLog.check_out_at);
+    const isCheckedInToday = hasTodayIn && !hasTodayOut;
+
+    res.json({
+      latest,
+      today_log: todayLog,
+      is_checked_in: isCheckedInToday,
+      has_today_in: hasTodayIn,
+      has_today_out: hasTodayOut,
+      can_check_in_today: !hasTodayIn,
+      can_check_out_today: hasTodayIn && !hasTodayOut,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Failed to load INOUT status." });
+  }
+};
+
+exports.checkIn = async (req, res) => {
+  const userId = Number(req.user?.id || req.user?.userId || 0);
+  const role = String(req.user?.role || "").trim().toLowerCase() || "user";
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  try {
+    await ensureInOutLogTable();
+    const userName = await getUserName(userId);
+
+    const todayRs = await db.query(
+      `SELECT id, check_in_at, check_out_at
+       FROM user_inout_logs
+       WHERE user_id = $1
+         AND DATE(check_in_at) = CURRENT_DATE
+       ORDER BY check_in_at DESC, id DESC
+       LIMIT 1`,
+      { bind: [userId] }
+    );
+    const todayRows = Array.isArray(todayRs?.[0]) ? todayRs[0] : [];
+    if (todayRows.length) {
+      if (todayRows[0].check_out_at) {
+        return res.status(400).json({
+          message: "Today Time In and Time Out already saved.",
+        });
+      }
+      return res.status(400).json({
+        message: `Today Time In already saved at ${new Date(todayRows[0].check_in_at).toLocaleString()}.`,
+      });
+    }
+
+    const lat = toNullableFloat(req.body?.lat);
+    const lng = toNullableFloat(req.body?.lng);
+    const accuracy = toNullableFloat(req.body?.accuracy);
+    const locationLabel = toLocationLabel(
+      req.body?.location_label,
+      Number.isFinite(lat) && Number.isFinite(lng) ? "GPS" : "Computer"
+    );
+    const insertRs = await db.query(
+      `INSERT INTO user_inout_logs
+       (user_id, username, role, check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_location_label)
+       VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7)
+       RETURNING id, user_id, username, role, check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_location_label,
+                 check_out_at, check_out_lat, check_out_lng, check_out_accuracy, check_out_location_label`,
+      { bind: [userId, userName, role, lat, lng, accuracy, locationLabel] }
+    );
+    const rows = Array.isArray(insertRs?.[0]) ? insertRs[0] : [];
+    return res.json({
+      message: "Check In saved successfully.",
+      log: rows[0] || null,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to save Check In." });
+  }
+};
+
+exports.checkOut = async (req, res) => {
+  const userId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  try {
+    await ensureInOutLogTable();
+    const todayRs = await db.query(
+      `SELECT id, check_in_at, check_out_at
+       FROM user_inout_logs
+       WHERE user_id = $1
+         AND DATE(check_in_at) = CURRENT_DATE
+       ORDER BY check_in_at DESC, id DESC
+       LIMIT 1`,
+      { bind: [userId] }
+    );
+    const todayRows = Array.isArray(todayRs?.[0]) ? todayRs[0] : [];
+    if (!todayRows.length) {
+      return res.status(400).json({ message: "No Time In found for today." });
+    }
+    if (todayRows[0].check_out_at) {
+      return res.status(400).json({
+        message: `Today Time Out already saved at ${new Date(todayRows[0].check_out_at).toLocaleString()}.`,
+      });
+    }
+
+    const lat = toNullableFloat(req.body?.lat);
+    const lng = toNullableFloat(req.body?.lng);
+    const accuracy = toNullableFloat(req.body?.accuracy);
+    const locationLabel = toLocationLabel(
+      req.body?.location_label,
+      Number.isFinite(lat) && Number.isFinite(lng) ? "GPS" : "Computer"
+    );
+
+    const updateRs = await db.query(
+      `UPDATE user_inout_logs
+       SET check_out_at = NOW(),
+           check_out_lat = $2,
+           check_out_lng = $3,
+           check_out_accuracy = $4,
+           check_out_location_label = $5
+       WHERE id = $1
+       RETURNING id, user_id, username, role, check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_location_label,
+                 check_out_at, check_out_lat, check_out_lng, check_out_accuracy, check_out_location_label`,
+      { bind: [Number(todayRows[0].id || 0), lat, lng, accuracy, locationLabel] }
+    );
+    const rows = Array.isArray(updateRs?.[0]) ? updateRs[0] : [];
+    return res.json({
+      message: "Time Out saved successfully.",
+      log: rows[0] || null,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to save Time Out." });
+  }
+};
+
+exports.getMonthlyTimeSheet = async (req, res) => {
+  const role = String(req.user?.role || "").trim().toLowerCase();
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  try {
+    await ensureInOutLogTable();
+    const range = parseMonthRange(req.query?.month);
+
+    const requestedUserId = Number(req.query?.user_id || 0);
+    const canViewAll = role === "admin" || role === "manager";
+    const targetUserId = canViewAll && Number.isFinite(requestedUserId) && requestedUserId > 0
+      ? requestedUserId
+      : requesterUserId;
+
+    const queryAll = canViewAll && (!Number.isFinite(requestedUserId) || requestedUserId <= 0);
+    const bindings = queryAll ? [range.startIso, range.endIso] : [targetUserId, range.startIso, range.endIso];
+    const whereClause = queryAll
+      ? `DATE(check_in_at) >= $1 AND DATE(check_in_at) < $2`
+      : `user_id = $1 AND DATE(check_in_at) >= $2 AND DATE(check_in_at) < $3`;
+    const canEditDates = await canEditTimesheetDates(req, queryAll ? requesterUserId : targetUserId);
+
+    const rs = await db.query(
+      `SELECT id, user_id, username, role,
+              check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_location_label,
+              check_out_at, check_out_lat, check_out_lng, check_out_accuracy, check_out_location_label,
+              CASE
+                WHEN check_out_at IS NULL THEN NULL
+                ELSE ROUND(EXTRACT(EPOCH FROM (check_out_at - check_in_at)) / 60.0, 2)
+              END AS duration_minutes
+       FROM user_inout_logs
+       WHERE ${whereClause}
+       ORDER BY check_in_at DESC, id DESC`,
+      { bind: bindings }
+    );
+    const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+
+    let userOptions = [];
+    if (canViewAll) {
+      const usersRs = await db.query(
+        `SELECT id AS user_id, username
+         FROM users
+         ORDER BY LOWER(username) ASC, id ASC`
+      );
+      const usersRows = Array.isArray(usersRs?.[0]) ? usersRs[0] : [];
+      userOptions = usersRows.map((row) => ({
+        user_id: Number(row.user_id || 0),
+        username: String(row.username || ""),
+      }));
+    }
+
+    return res.json({
+      month: range.month,
+      rows,
+      user_options: userOptions,
+      target_user_id: queryAll ? null : targetUserId,
+      can_edit_dates: canEditDates,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to load monthly timesheet." });
+  }
+};
+
+exports.createTimesheetLog = async (req, res) => {
+  const requesterRole = normalizeAccessRole(req.user?.role);
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  const requestedUserId = toPositiveIntOrNull(req.body?.user_id);
+  const targetUserId = requestedUserId || requesterUserId;
+
+  if (requesterRole === "user" && targetUserId !== requesterUserId) {
+    return res.status(403).json({ message: "Forbidden: You can only edit your own timesheet." });
+  }
+
+  const canEdit = await canEditTimesheetDates(req, targetUserId);
+  if (!canEdit) {
+    return res.status(403).json({ message: "Forbidden: Missing Time Sheet edit permission." });
+  }
+
+  const checkInAt = normalizeDateTimeMinute(req.body?.check_in_at);
+  const checkOutAt = normalizeDateTimeMinute(req.body?.check_out_at);
+  if (!checkInAt) {
+    return res.status(400).json({ message: "Valid Check In date/time is required." });
+  }
+  if (checkOutAt && new Date(checkOutAt).getTime() < new Date(checkInAt).getTime()) {
+    return res.status(400).json({ message: "Check Out cannot be before Check In." });
+  }
+
+  const checkInDate = checkInAt.slice(0, 10);
+
+  try {
+    await ensureInOutLogTable();
+    const identity = await getUserIdentity(targetUserId);
+    if (!identity) {
+      return res.status(404).json({ message: "Target user not found." });
+    }
+
+    const duplicateRs = await db.query(
+      `SELECT id
+       FROM user_inout_logs
+       WHERE user_id = $1
+         AND DATE(check_in_at) = $2::date
+       LIMIT 1`,
+      { bind: [targetUserId, checkInDate] }
+    );
+    const duplicateRows = Array.isArray(duplicateRs?.[0]) ? duplicateRs[0] : [];
+    if (duplicateRows.length) {
+      return res.status(400).json({ message: "A timesheet log already exists for this user and date." });
+    }
+
+    const inLabel = toLocationLabel(req.body?.check_in_location_label, "Manual Edit");
+    const outLabel = checkOutAt ? toLocationLabel(req.body?.check_out_location_label, "Manual Edit") : null;
+
+    const insertRs = await db.query(
+      `INSERT INTO user_inout_logs
+       (user_id, username, role, check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_location_label,
+        check_out_at, check_out_lat, check_out_lng, check_out_accuracy, check_out_location_label, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4::timestamp, NULL, NULL, NULL, $5, $6::timestamp, NULL, NULL, NULL, $7, NOW(), NOW())
+       RETURNING id, user_id, username, role,
+                 check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_location_label,
+                 check_out_at, check_out_lat, check_out_lng, check_out_accuracy, check_out_location_label`,
+      {
+        bind: [
+          targetUserId,
+          identity.username,
+          identity.role,
+          checkInAt,
+          inLabel,
+          checkOutAt || null,
+          outLabel,
+        ],
+      }
+    );
+    const rows = Array.isArray(insertRs?.[0]) ? insertRs[0] : [];
+    return res.json({
+      message: "Timesheet log saved successfully.",
+      log: rows[0] || null,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to save timesheet log." });
+  }
+};
+
+exports.updateTimesheetLog = async (req, res) => {
+  const requesterRole = normalizeAccessRole(req.user?.role);
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  const logId = Number(req.params?.logId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+  if (!Number.isFinite(logId) || logId <= 0) {
+    return res.status(400).json({ message: "Invalid log id." });
+  }
+
+  const checkInAt = normalizeDateTimeMinute(req.body?.check_in_at);
+  const checkOutAt = normalizeDateTimeMinute(req.body?.check_out_at);
+  if (!checkInAt) {
+    return res.status(400).json({ message: "Valid Check In date/time is required." });
+  }
+  if (checkOutAt && new Date(checkOutAt).getTime() < new Date(checkInAt).getTime()) {
+    return res.status(400).json({ message: "Check Out cannot be before Check In." });
+  }
+
+  try {
+    await ensureInOutLogTable();
+    const existingRs = await db.query(
+      `SELECT id, user_id, check_in_location_label, check_out_location_label
+       FROM user_inout_logs
+       WHERE id = $1
+       LIMIT 1`,
+      { bind: [logId] }
+    );
+    const existingRows = Array.isArray(existingRs?.[0]) ? existingRs[0] : [];
+    const existing = existingRows[0] || null;
+    if (!existing) {
+      return res.status(404).json({ message: "Timesheet log not found." });
+    }
+
+    const targetUserId = Number(existing.user_id || 0);
+    if (requesterRole === "user" && targetUserId !== requesterUserId) {
+      return res.status(403).json({ message: "Forbidden: You can only edit your own timesheet." });
+    }
+
+    const canEdit = await canEditTimesheetDates(req, targetUserId);
+    if (!canEdit) {
+      return res.status(403).json({ message: "Forbidden: Missing Time Sheet edit permission." });
+    }
+
+    const checkInDate = checkInAt.slice(0, 10);
+    const duplicateRs = await db.query(
+      `SELECT id
+       FROM user_inout_logs
+       WHERE user_id = $1
+         AND DATE(check_in_at) = $2::date
+         AND id <> $3
+       LIMIT 1`,
+      { bind: [targetUserId, checkInDate, logId] }
+    );
+    const duplicateRows = Array.isArray(duplicateRs?.[0]) ? duplicateRs[0] : [];
+    if (duplicateRows.length) {
+      return res.status(400).json({ message: "Another timesheet log already exists for this user and date." });
+    }
+
+    const inLabel = toLocationLabel(
+      req.body?.check_in_location_label,
+      String(existing.check_in_location_label || "Manual Edit")
+    );
+    const outLabel = checkOutAt
+      ? toLocationLabel(req.body?.check_out_location_label, String(existing.check_out_location_label || "Manual Edit"))
+      : null;
+
+    const updateRs = await db.query(
+      `UPDATE user_inout_logs
+       SET check_in_at = $2::timestamp,
+           check_in_location_label = $3,
+           check_out_at = $4::timestamp,
+           check_out_location_label = $5,
+           check_out_lat = CASE WHEN $4::timestamp IS NULL THEN NULL ELSE check_out_lat END,
+           check_out_lng = CASE WHEN $4::timestamp IS NULL THEN NULL ELSE check_out_lng END,
+           check_out_accuracy = CASE WHEN $4::timestamp IS NULL THEN NULL ELSE check_out_accuracy END,
+           "updatedAt" = NOW()
+       WHERE id = $1
+       RETURNING id, user_id, username, role,
+                 check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_location_label,
+                 check_out_at, check_out_lat, check_out_lng, check_out_accuracy, check_out_location_label`,
+      { bind: [logId, checkInAt, inLabel, checkOutAt || null, outLabel] }
+    );
+    const rows = Array.isArray(updateRs?.[0]) ? updateRs[0] : [];
+    return res.json({
+      message: "Timesheet log updated successfully.",
+      log: rows[0] || null,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to update timesheet log." });
+  }
+};
+
+exports.getSallaryUsers = async (req, res) => {
+  const role = String(req.user?.role || "").trim().toLowerCase();
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  try {
+    await ensureSallaryProfileTable();
+    const viewAll = canViewAllSallaryUsers(role);
+    const rs = await db.query(
+      `SELECT u.id AS user_id,
+              u.username,
+              u.role,
+              u.department,
+              u.email,
+              COALESCE(NULLIF(TRIM(up.profile_name), ''), u.username) AS profile_name,
+              COALESCE(NULLIF(TRIM(up.mobile), ''), NULLIF(TRIM(u.telephone), ''), '') AS mobile,
+              COALESCE(NULLIF(TRIM(up.address), ''), '') AS address,
+              sp.bank_name,
+              sp.bank_account,
+              sp.basic_sallary,
+              sp."updatedAt" AS sallary_updated_at
+       FROM users u
+       LEFT JOIN user_profiles up ON up.user_id = u.id
+       LEFT JOIN user_sallary_profiles sp ON sp.user_id = u.id
+       WHERE ($1::boolean = TRUE OR u.id = $2)
+       ORDER BY LOWER(COALESCE(NULLIF(TRIM(up.profile_name), ''), u.username)) ASC, u.id ASC`,
+      { bind: [viewAll, requesterUserId] }
+    );
+    const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+    const normalizedRows = rows.map((row) => ({
+      user_id: Number(row.user_id || 0),
+      username: String(row.username || ""),
+      role: String(row.role || ""),
+      profile_name: String(row.profile_name || "").trim() || String(row.username || ""),
+      department: String(row.department || "").trim(),
+      email: String(row.email || "").trim(),
+      mobile: String(row.mobile || "").trim(),
+      address: String(row.address || "").trim(),
+      bank_name: String(row.bank_name || "").trim(),
+      bank_account: String(row.bank_account || "").trim(),
+      basic_sallary: normalizeBasicSallary(row.basic_sallary),
+      sallary_updated_at: row.sallary_updated_at ? new Date(row.sallary_updated_at).toISOString() : "",
+    }));
+
+    return res.json({
+      rows: normalizedRows,
+      can_view_all: viewAll,
+      requester_user_id: requesterUserId,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to load sallary users." });
+  }
+};
+
+exports.getSallaryDetailByUserId = async (req, res) => {
+  const role = String(req.user?.role || "").trim().toLowerCase();
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  const userId = Number(req.params?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return res.status(400).json({ message: "Invalid user id." });
+  }
+
+  try {
+    await ensureSallaryProfileTable();
+    const viewAll = canViewAllSallaryUsers(role);
+    if (!viewAll && userId !== requesterUserId) {
+      return res.status(403).json({ message: "Forbidden: You can only view your own sallary profile." });
+    }
+
+    const row = await getSallaryUserRow(userId);
+    if (!row) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    const fixedCycle = resolveFixedSallaryCycle();
+
+    return res.json({
+      user_id: Number(row.user_id || 0),
+      username: String(row.username || "").trim(),
+      role: String(row.role || "").trim(),
+      department: String(row.department || "").trim(),
+      email: String(row.email || "").trim(),
+      profile_name: String(row.profile_name || "").trim() || String(row.username || "").trim(),
+      mobile: String(row.mobile || "").trim(),
+      address: String(row.address || "").trim(),
+      bank_name: String(row.bank_name || "").trim(),
+      other_bank_name: String(row.other_bank_name || "").trim(),
+      bank_account: String(row.bank_account || "").trim(),
+      basic_sallary: normalizeBasicSallary(row.basic_sallary),
+      salary_start_date: fixedCycle.start_date,
+      salary_end_date: fixedCycle.end_date,
+      working_days: normalizeBasicSallary(row.working_days),
+      ot_pay_amount: normalizeBasicSallary(row.ot_pay_amount),
+      superior_user_id: toPositiveIntOrNull(row.superior_user_id),
+      superior_user_name: String(row.superior_username || "").trim(),
+      superior_user_role: String(row.superior_role || "").trim(),
+      allowances: parseStoredAllowances(row.allowances_json),
+      deductions: parseStoredDeductions(row.deductions_json),
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to load sallary detail." });
+  }
+};
+
+exports.upsertSallaryDetailByUserId = async (req, res) => {
+  const role = String(req.user?.role || "").trim().toLowerCase();
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  const userId = Number(req.params?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return res.status(400).json({ message: "Invalid user id." });
+  }
+
+  try {
+    await ensureSallaryProfileTable();
+    const viewAll = canViewAllSallaryUsers(role);
+    if (!viewAll && userId !== requesterUserId) {
+      return res.status(403).json({ message: "Forbidden: You can only update your own sallary profile." });
+    }
+
+    const sourceRow = await getSallaryUserRow(userId);
+    if (!sourceRow) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const bankName = normalizeBankName(req.body?.bank_name);
+    const otherBankName = bankName === "OTHER"
+      ? String(req.body?.other_bank_name || "").trim().slice(0, 160)
+      : "";
+    const bankAccount = String(req.body?.bank_account || "").trim().slice(0, 120);
+    const basicSallary = normalizeBasicSallary(req.body?.basic_sallary ?? req.body?.basic_salary);
+    const fixedCycle = resolveFixedSallaryCycle();
+    const salaryStartDate = fixedCycle.start_date;
+    const salaryEndDate = fixedCycle.end_date;
+    const workingDays = normalizeBasicSallary(req.body?.working_days);
+    const otPayAmount = normalizeBasicSallary(req.body?.ot_pay_amount);
+    const superiorUserId = toPositiveIntOrNull(req.body?.superior_user_id);
+    const allowances = parseAllowances(req.body?.allowances);
+    const deductions = parseAllowances(req.body?.deductions);
+
+    if (superiorUserId && superiorUserId === userId) {
+      return res.status(400).json({ message: "Supiror cannot be same as current user." });
+    }
+
+    let superiorRole = "";
+    let superiorUsername = "";
+    if (superiorUserId) {
+      const superiorRs = await db.query(
+        `SELECT id, username, role
+         FROM users
+         WHERE id = $1
+         LIMIT 1`,
+        { bind: [superiorUserId] }
+      );
+      const superiorRows = Array.isArray(superiorRs?.[0]) ? superiorRs[0] : [];
+      const superior = superiorRows[0] || null;
+      if (!superior) {
+        return res.status(400).json({ message: "Selected Supiror user not found." });
+      }
+      superiorRole = String(superior.role || "").trim();
+      superiorUsername = String(superior.username || "").trim();
+      if (!canAssignSupirorRole(role, superiorRole)) {
+        return res.status(403).json({ message: "Forbidden: Selected Supiror role is not allowed for your role." });
+      }
+    }
+
+    await db.query(
+      `INSERT INTO user_sallary_profiles
+         (user_id, username, role, profile_name, department, email, mobile, address,
+          bank_name, other_bank_name, bank_account, basic_sallary, salary_start_date, salary_end_date, working_days, ot_pay_amount, superior_user_id, allowances_json, deductions_json, "createdAt", "updatedAt")
+       VALUES
+         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         username = EXCLUDED.username,
+         role = EXCLUDED.role,
+         profile_name = EXCLUDED.profile_name,
+         department = EXCLUDED.department,
+         email = EXCLUDED.email,
+         mobile = EXCLUDED.mobile,
+         address = EXCLUDED.address,
+         bank_name = EXCLUDED.bank_name,
+         other_bank_name = EXCLUDED.other_bank_name,
+         bank_account = EXCLUDED.bank_account,
+         basic_sallary = EXCLUDED.basic_sallary,
+         salary_start_date = EXCLUDED.salary_start_date,
+         salary_end_date = EXCLUDED.salary_end_date,
+         working_days = EXCLUDED.working_days,
+         ot_pay_amount = EXCLUDED.ot_pay_amount,
+         superior_user_id = EXCLUDED.superior_user_id,
+         allowances_json = EXCLUDED.allowances_json,
+         deductions_json = EXCLUDED.deductions_json,
+         "updatedAt" = NOW()`,
+      {
+        bind: [
+          userId,
+          String(sourceRow.username || "").trim(),
+          String(sourceRow.role || "").trim(),
+          String(sourceRow.profile_name || "").trim(),
+          String(sourceRow.department || "").trim(),
+          String(sourceRow.email || "").trim(),
+          String(sourceRow.mobile || "").trim(),
+          String(sourceRow.address || "").trim(),
+          bankName || null,
+          otherBankName || null,
+          bankAccount || null,
+          basicSallary,
+          salaryStartDate || null,
+          salaryEndDate || null,
+          workingDays,
+          otPayAmount,
+          superiorUserId || null,
+          JSON.stringify(allowances),
+          JSON.stringify(deductions),
+        ],
+      }
+    );
+
+    const row = await getSallaryUserRow(userId);
+    return res.json({
+      message: "Sallary details saved successfully.",
+      detail: {
+        user_id: Number(row?.user_id || 0),
+        username: String(row?.username || "").trim(),
+        role: String(row?.role || "").trim(),
+        department: String(row?.department || "").trim(),
+        email: String(row?.email || "").trim(),
+        profile_name: String(row?.profile_name || "").trim() || String(row?.username || "").trim(),
+        mobile: String(row?.mobile || "").trim(),
+        address: String(row?.address || "").trim(),
+        bank_name: String(row?.bank_name || "").trim(),
+        other_bank_name: String(row?.other_bank_name || "").trim(),
+        bank_account: String(row?.bank_account || "").trim(),
+        basic_sallary: normalizeBasicSallary(row?.basic_sallary),
+        salary_start_date: row?.salary_start_date ? new Date(row.salary_start_date).toISOString().slice(0, 10) : "",
+        salary_end_date: row?.salary_end_date ? new Date(row.salary_end_date).toISOString().slice(0, 10) : "",
+        working_days: normalizeBasicSallary(row?.working_days),
+        ot_pay_amount: normalizeBasicSallary(row?.ot_pay_amount),
+        superior_user_id: toPositiveIntOrNull(row?.superior_user_id),
+        superior_user_name: String(row?.superior_username || superiorUsername || "").trim(),
+        superior_user_role: String(row?.superior_role || superiorRole || "").trim(),
+        allowances: parseStoredAllowances(row?.allowances_json),
+        deductions: parseStoredDeductions(row?.deductions_json),
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to save sallary detail." });
+  }
+};
+
+exports.getSallaryWorkSummary = async (req, res) => {
+  const role = String(req.user?.role || "").trim().toLowerCase();
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  const userId = Number(req.params?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return res.status(400).json({ message: "Invalid user id." });
+  }
+
+  let startDate = normalizeDateOnly(req.query?.start_date);
+  let endDate = normalizeDateOnly(req.query?.end_date);
+  if (!startDate || !endDate) {
+    const fixedCycle = resolveFixedSallaryCycle();
+    startDate = fixedCycle.start_date;
+    endDate = fixedCycle.end_date;
+  }
+  if (endDate < startDate) {
+    return res.status(400).json({ message: "End date cannot be before start date." });
+  }
+
+  try {
+    await ensureSallaryProfileTable();
+    await ensureInOutLogTable();
+    const viewAll = canViewAllSallaryUsers(role);
+    if (!viewAll && userId !== requesterUserId) {
+      return res.status(403).json({ message: "Forbidden: You can only view your own work summary." });
+    }
+
+    const rs = await db.query(
+      `WITH filtered AS (
+         SELECT DATE(check_in_at) AS log_date,
+                CASE
+                  WHEN check_out_at IS NULL THEN 0
+                  ELSE GREATEST(EXTRACT(EPOCH FROM (check_out_at - check_in_at)) / 3600.0, 0)
+                END AS duration_hours
+         FROM user_inout_logs
+         WHERE user_id = $1
+           AND DATE(check_in_at) >= $2
+           AND DATE(check_in_at) <= $3
+       ),
+       per_day AS (
+         SELECT log_date, SUM(duration_hours) AS day_hours
+         FROM filtered
+         GROUP BY log_date
+       )
+       SELECT COALESCE(ROUND(SUM(day_hours)::numeric, 2), 0) AS total_working_hours,
+              COALESCE(ROUND(SUM(CASE WHEN day_hours > 8 THEN day_hours - 8 ELSE 0 END)::numeric, 2), 0) AS total_ot_hours,
+              COALESCE(ROUND(SUM(LEAST(day_hours, 8) / 8.0)::numeric, 2), 0) AS calculated_working_days,
+              COUNT(*)::INTEGER AS present_days
+       FROM per_day`,
+      { bind: [userId, startDate, endDate] }
+    );
+    const rows = Array.isArray(rs?.[0]) ? rs[0] : [];
+    const row = rows[0] || {};
+    return res.json({
+      user_id: userId,
+      start_date: startDate,
+      end_date: endDate,
+      present_days: Number(row.present_days || 0),
+      calculated_working_days: normalizeBasicSallary(row.calculated_working_days),
+      total_working_hours: normalizeBasicSallary(row.total_working_hours),
+      total_ot_hours: normalizeBasicSallary(row.total_ot_hours),
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to calculate work summary." });
+  }
+};
+
+exports.getLeaveMeta = async (req, res) => {
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  try {
+    await ensureLeaveTable();
+    const userRow = await getLeaveUserRow(requesterUserId);
+    if (!userRow) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const monthRange = resolveCurrentMonthRange();
+    const tiles = await getLeaveTilesForMonth(
+      requesterUserId,
+      monthRange.startDate,
+      monthRange.endDateExclusive
+    );
+
+    return res.json({
+      user_id: Number(userRow.user_id || 0),
+      username: String(userRow.username || "").trim(),
+      role: String(userRow.role || "").trim(),
+      profile_name: String(userRow.profile_name || "").trim() || String(userRow.username || "").trim(),
+      supirior_user_id: toPositiveIntOrNull(userRow.superior_user_id),
+      supirior_name: String(userRow.superior_username || "").trim(),
+      month: monthRange.month,
+      tiles,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to load leave page data." });
+  }
+};
+
+exports.applyLeave = async (req, res) => {
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  const leaveType = normalizeLeaveType(req.body?.leave_type);
+  if (!leaveType) {
+    return res.status(400).json({ message: "Leave type is required. Use Full Leave or Half Day Leave." });
+  }
+
+  const startDate = normalizeDateOnly(req.body?.start_date || req.body?.leave_date);
+  const endDate = normalizeDateOnly(req.body?.end_date || startDate);
+  if (!startDate || !endDate) {
+    return res.status(400).json({ message: "Start date and end date are required." });
+  }
+  if (endDate < startDate) {
+    return res.status(400).json({ message: "End date cannot be before start date." });
+  }
+  if (leaveType === "half" && endDate !== startDate) {
+    return res.status(400).json({ message: "Half day leave must be for a single date." });
+  }
+
+  const reason = String(req.body?.reason || "").trim().slice(0, 1000);
+
+  try {
+    await ensureLeaveTable();
+    const userRow = await getLeaveUserRow(requesterUserId);
+    if (!userRow) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const insertRs = await db.query(
+      `INSERT INTO user_leave_requests
+         (user_id, username, role, profile_name, supirior_user_id, supirior_name, leave_type, start_date, end_date, reason, status, "createdAt", "updatedAt")
+       VALUES
+         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Pending', NOW(), NOW())
+       RETURNING id, user_id, username, role, profile_name, supirior_user_id, supirior_name,
+                 leave_type, start_date, end_date, reason, status, "createdAt", "updatedAt"`,
+      {
+        bind: [
+          requesterUserId,
+          String(userRow.username || "").trim(),
+          String(userRow.role || "").trim(),
+          String(userRow.profile_name || "").trim() || String(userRow.username || "").trim(),
+          toPositiveIntOrNull(userRow.superior_user_id),
+          String(userRow.superior_username || "").trim() || null,
+          leaveType,
+          startDate,
+          endDate,
+          reason || null,
+        ],
+      }
+    );
+    const rows = Array.isArray(insertRs?.[0]) ? insertRs[0] : [];
+    const monthRange = resolveCurrentMonthRange();
+    const tiles = await getLeaveTilesForMonth(
+      requesterUserId,
+      monthRange.startDate,
+      monthRange.endDateExclusive
+    );
+
+    return res.json({
+      message: "Leave applied successfully.",
+      leave: rows[0] || null,
+      month: monthRange.month,
+      tiles,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to apply leave." });
+  }
+};
+
+exports.getPayslipUsers = async (req, res) => {
+  const role = String(req.user?.role || "").trim().toLowerCase();
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+
+  try {
+    const monthRange = parseMonthRange(req.query?.month);
+    const rows = await getPayslipVisibleUsers(role, requesterUserId);
+    return res.json({
+      month: monthRange.month,
+      rows,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to load payslip users." });
+  }
+};
+
+exports.getPayslipByUserId = async (req, res) => {
+  const role = String(req.user?.role || "").trim().toLowerCase();
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  const targetUserId = Number(req.params?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+  if (!Number.isFinite(targetUserId) || targetUserId <= 0) {
+    return res.status(400).json({ message: "Invalid user id." });
+  }
+
+  try {
+    const monthRange = parseMonthRange(req.query?.month);
+    const visibleRows = await getPayslipVisibleUsers(role, requesterUserId);
+    const visibleTarget = visibleRows.find((row) => Number(row.user_id || 0) === targetUserId);
+    if (!visibleTarget) {
+      return res.status(403).json({ message: "Forbidden: You cannot view this payslip." });
+    }
+
+    const payslip = await buildPayslipDetailData(targetUserId, monthRange);
+    if (!payslip) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    const company = await resolveMappedCompanyProfile(req);
+    return res.json({
+      company,
+      payslip,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to load payslip detail." });
+  }
+};
+
+exports.sendPayslipEmail = async (req, res) => {
+  const role = String(req.user?.role || "").trim().toLowerCase();
+  const requesterUserId = Number(req.user?.id || req.user?.userId || 0);
+  const targetUserId = Number(req.params?.userId || 0);
+  if (!Number.isFinite(requesterUserId) || requesterUserId <= 0) {
+    return res.status(401).json({ message: "Invalid token user." });
+  }
+  if (!Number.isFinite(targetUserId) || targetUserId <= 0) {
+    return res.status(400).json({ message: "Invalid user id." });
+  }
+
+  try {
+    const pdfBuffer = parseBase64PdfAttachment(req.body?.attachment_pdf_base64);
+    if (!pdfBuffer) {
+      return res.status(400).json({ message: "Payslip PDF attachment is required." });
+    }
+
+    const monthRange = parseMonthRange(req.body?.month || req.query?.month);
+    const visibleRows = await getPayslipVisibleUsers(role, requesterUserId);
+    const visibleTarget = visibleRows.find((row) => Number(row.user_id || 0) === targetUserId);
+    if (!visibleTarget) {
+      return res.status(403).json({ message: "Forbidden: You cannot send this payslip." });
+    }
+
+    const payslip = await buildPayslipDetailData(targetUserId, monthRange);
+    if (!payslip) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    const recipient = String(payslip.user?.email || "").trim();
+    if (!recipient) {
+      return res.status(404).json({ message: "User email not found for selected payslip user." });
+    }
+
+    const setup = await EmailSetup.findOne({ order: [["id", "ASC"]] });
+    const smtpPayload = buildSmtpPayload(setup);
+    if (!hasSmtpConfig(smtpPayload)) {
+      return res.status(400).json({ message: "Email setup is incomplete. Please configure Support > Email Setup." });
+    }
+
+    const company = await resolveMappedCompanyProfile(req);
+    const profileName = String(payslip.user?.profile_name || payslip.user?.username || "user").trim();
+    const defaultFileName = `payslip-${profileName.replace(/\s+/g, "-")}-${monthRange.month}.pdf`;
+    const attachmentNameRaw = String(req.body?.attachment_file_name || "").trim();
+    const attachmentFileName = attachmentNameRaw || defaultFileName;
+
+    const subject = `Payslip ${monthRange.month} - ${profileName}`;
+    const textBody = [
+      `Dear ${profileName},`,
+      "",
+      `Please find attached your payslip for ${payslip.month_label}.`,
+      "",
+      "This is an auto-generated message.",
+      `${String(company.company_name || "AXIS PRODUCTION").trim() || "AXIS PRODUCTION"}`,
+    ].join("\n");
+    const htmlBody = textBody.split("\n").map((line) => line.trim()).join("<br>");
+
+    await sendEmail({
+      to: recipient,
+      subject,
+      text: textBody,
+      html: htmlBody,
+      attachments: [
+        {
+          filename: attachmentFileName.toLowerCase().endsWith(".pdf")
+            ? attachmentFileName
+            : `${attachmentFileName}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+      smtpConfig: smtpPayload.smtpConfig,
+      from: smtpPayload.from,
+    });
+
+    return res.json({
+      message: `Payslip email sent to ${recipient}.`,
+      recipient,
+      month: monthRange.month,
+      user_id: targetUserId,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to send payslip email." });
+  }
+};

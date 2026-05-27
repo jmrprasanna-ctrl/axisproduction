@@ -1,4 +1,14 @@
-.report-block{
+.stock-page-head{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        margin-bottom:16px;
+    }
+    .stock-page-head h2{
+        margin:0;
+    }
+    .report-block{
         border: 1px solid #d9e6f3;
         border-radius: 14px;
         padding: 14px;
@@ -51,9 +61,13 @@
         align-items: center;
         flex-wrap: nowrap;
         white-space: nowrap;
+        width: max-content;
     }
     .stock-qty{
-        width: 72px;
+        width: 68px !important;
+        min-width: 68px;
+        max-width: 68px;
+        flex: 0 0 68px;
         margin: 0;
     }
     #stockTable{
@@ -79,7 +93,39 @@
         .report-controls{
             width:100%;
         }
+        #stockTable{
+            min-width:760px;
+        }
+        #stockTable th,
+        #stockTable td{
+            padding:6px 8px;
+            font-size:0.8rem;
+            line-height:1.2;
+        }
+        #stockTable th:nth-child(1),
+        #stockTable td:nth-child(1){
+            min-width:88px;
+        }
+        #stockTable th:nth-child(2),
+        #stockTable td:nth-child(2){
+            min-width:170px;
+        }
+        #stockTable th:nth-child(3),
+        #stockTable td:nth-child(3),
+        #stockTable th:nth-child(4),
+        #stockTable td:nth-child(4){
+            min-width:96px;
+        }
+        #stockTable th:nth-child(5),
+        #stockTable td:nth-child(5){
+            min-width:72px;
+        }
+        #stockTable th:nth-child(6),
+        #stockTable td:nth-child(6){
+            min-width:168px;
+        }
         .stock-actions{
+            gap:4px;
             flex-direction: row !important;
             align-items: center !important;
             flex-wrap: nowrap !important;
@@ -87,9 +133,65 @@
         .stock-actions > *{
             width: auto !important;
         }
+        .stock-qty{
+            width:50px !important;
+            min-width:50px !important;
+            max-width:50px !important;
+            flex:0 0 50px !important;
+        }
         .stock-actions > .stock-action-icon{
-            width:40px !important;
-            min-width:40px !important;
-            max-width:40px !important;
+            width:30px !important;
+            min-width:30px !important;
+            max-width:30px !important;
+            height:30px !important;
+            min-height:30px !important;
+        }
+    }
+    @media (max-width: 640px){
+        #stockTable{
+            min-width:620px;
+        }
+        #stockTable th,
+        #stockTable td{
+            padding:5px 6px;
+            font-size:0.76rem;
+            line-height:1.15;
+        }
+        #stockTable th:nth-child(1),
+        #stockTable td:nth-child(1){
+            min-width:76px;
+        }
+        #stockTable th:nth-child(2),
+        #stockTable td:nth-child(2){
+            min-width:140px;
+            white-space:normal;
+            word-break:break-word;
+        }
+        #stockTable th:nth-child(3),
+        #stockTable td:nth-child(3),
+        #stockTable th:nth-child(4),
+        #stockTable td:nth-child(4){
+            min-width:82px;
+        }
+        #stockTable th:nth-child(5),
+        #stockTable td:nth-child(5){
+            min-width:64px;
+        }
+        #stockTable th:nth-child(6),
+        #stockTable td:nth-child(6){
+            min-width:130px;
+        }
+        .stock-qty{
+            width:46px !important;
+            min-width:46px !important;
+            max-width:46px !important;
+            flex:0 0 46px !important;
+        }
+        .stock-actions > .stock-action-icon{
+            width:28px !important;
+            min-width:28px !important;
+            max-width:28px !important;
+            height:28px !important;
+            min-height:28px !important;
         }
     }

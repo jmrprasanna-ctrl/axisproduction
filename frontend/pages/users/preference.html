@@ -1,5 +1,5 @@
 <!--
-  System: PULMO WEB SYSTEM 
+  System: AXIS PRODUCTION SYSTEM 
   Owner : CRONIT SOLLUTIONS 
   Author: JMR Prasanna
 -->
@@ -8,7 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preference - PULMO TECHNOLOGIES</title>
+    <title>System Preference - AXIS PRODUCTION</title>
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/extracted/pages/users/preference.inline-style-1.css">
@@ -17,7 +17,7 @@
     <div class="sidebar">
         <div class="logo">
             <img src="../../assets/images/logo.png" alt="Company Logo">
-            <span>PULMO TECHNOLOGIES</span>
+            <span>AXIS PRODUCTION</span>
         </div>
         <ul class="nav-links">
             <li><a href="../dashboard.html">Dashboard</a></li>
@@ -34,13 +34,21 @@
 
     <div class="main-content">
         <header class="page-head">
-            <h2>Preference</h2>
+            <h2>System Preference</h2>
             <a class="icon-btn" href="../dashboard.html" aria-label="Back to dashboard" title="Back to dashboard">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </a>
         </header>
+
+        <div class="preference-target card" id="preferenceTargetCard">
+            <label for="preferenceUserSelect">Target User (Mapped DB)</label>
+            <select id="preferenceUserSelect">
+                <option value="">Loading users...</option>
+            </select>
+            <div class="pref-status" id="preferenceTargetStatus">Uploads will save to selected user database folder.</div>
+        </div>
 
         <div class="preference-grid">
             <div class="preference-card">
@@ -160,42 +168,11 @@
                 <div class="pref-status" id="sealQ3MappedStatus">Mapped Users: -</div>
             </div>
 
-            <div class="preference-card">
-                <h3>Theme Settings</h3>
-                <p>Dashboard color, background color, button color and mode.</p>
-
-                <label for="dashboardColorPreset">Dashboard Color (8 presets)</label>
-                <select id="dashboardColorPreset">
-                    <option value="#0f6abf">Default Blue</option>
-                    <option value="#0b7285">Teal Blue</option>
-                    <option value="#146c43">Emerald Green</option>
-                    <option value="#7a4cc9">Royal Purple</option>
-                    <option value="#9b6b22">Golden Brown</option>
-                    <option value="#a33a3a">Crimson Red</option>
-                    <option value="#3f5d7d">Steel Blue</option>
-                    <option value="#2c3e50">Slate Navy</option>
-                </select>
-
-                <label for="backgroundColorInput">Background Color</label>
-                <input id="backgroundColorInput" type="color" value="#edf3fb">
-
-                <label for="buttonColorInput">Buttons Color</label>
-                <input id="buttonColorInput" type="color" value="#0f6abf">
-
-                <label for="modeThemeSelect">Mode</label>
-                <select id="modeThemeSelect">
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                </select>
-
-                <button class="btn btn-primary" type="button" onclick="saveThemeSettings()">Save Theme</button>
-                <div class="pref-status" id="themeStatus">Current: -</div>
-            </div>
         </div>
 
     </div>
 
-    <script src="../../assets/js/api.js"></script>
-    <script src="../../assets/extracted/pages/users/preference.inline-script-1.js"></script>
+    <script src="../../assets/js/api.js?v=20260521p3"></script>
+    <script src="../../assets/extracted/pages/users/preference.inline-script-1.js?v=20260521p3"></script>
 </body>
 </html>

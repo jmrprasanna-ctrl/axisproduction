@@ -3,13 +3,13 @@ set -euo pipefail
 
 REPO_URL="${1:-}"
 BRANCH="${2:-main}"
-APP_DIR="${APP_DIR:-/var/www/pulmo_web_UI}"
+APP_DIR="${APP_DIR:-/var/www/axis_production}"
 DOMAIN="${DOMAIN:-_}"
-PM2_NAME="${PM2_NAME:-pulmo-backend}"
+PM2_NAME="${PM2_NAME:-axis-production-backend}"
 
 if [[ -z "${REPO_URL}" ]]; then
   echo "Usage: $0 <repo-url> [branch]"
-  echo "Example: $0 https://github.com/your-user/pulmo_web_ui.git main"
+  echo "Example: $0 https://github.com/your-user/axis_production.git main"
   exit 1
 fi
 
@@ -54,12 +54,12 @@ echo "==> Enabling Apache modules"
 sudo a2enmod proxy proxy_http headers rewrite ssl
 
 echo "==> Installing Apache site config"
-APACHE_TEMPLATE="${APP_DIR}/deploy/ubuntu24/pulmo_web_ui.apache.conf"
-APACHE_SITE="/etc/apache2/sites-available/pulmo_web_ui.conf"
+APACHE_TEMPLATE="${APP_DIR}/deploy/ubuntu24/axis_production.apache.conf"
+APACHE_SITE="/etc/apache2/sites-available/axis_production.conf"
 sed -e "s|__APP_DIR__|${APP_DIR}|g" -e "s|__DOMAIN__|${DOMAIN}|g" "${APACHE_TEMPLATE}" | sudo tee "${APACHE_SITE}" >/dev/null
 
 sudo a2dissite 000-default.conf || true
-sudo a2ensite pulmo_web_ui.conf
+sudo a2ensite axis_production.conf
 sudo apache2ctl configtest
 sudo systemctl restart apache2
 sudo systemctl enable apache2

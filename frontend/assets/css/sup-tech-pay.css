@@ -1,0 +1,130 @@
+.main-content .page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.main-content .page-head h2 {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.main-content .page-head .icon-btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.form-container {
+  overflow-x: visible;
+}
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  flex: 0 1 420px;
+  width: 420px;
+  min-width: min(360px, 100%);
+  max-width: 100%;
+}
+
+.technician-filter-field {
+  flex: 0 0 260px;
+  width: 260px;
+  max-width: 100%;
+}
+
+.toolbar-icon-btn {
+  margin-top: 0;
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  padding: 0;
+  align-self: flex-end;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#supTechPayTable {
+  min-width: 860px;
+}
+
+#supTechPayTable td,
+#supTechPayTable th {
+  vertical-align: middle;
+}
+
+.sup-tech-row {
+  cursor: pointer;
+}
+
+.sup-tech-row:hover {
+  background: #f7fbff;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-paid {
+  background: #d9f5e2;
+  color: #177245;
+}
+
+.status-pending {
+  background: #ffe8cc;
+  color: #a24f00;
+}
+
+.action-link-btn {
+  border: 0;
+  background: transparent;
+  color: #0f6abf;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.action-link-btn:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .main-content .page-head {
+    gap: 10px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-field,
+  .technician-filter-field {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  #supTechPayTable {
+    min-width: 760px;
+  }
+}

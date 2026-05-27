@@ -25,14 +25,17 @@ function normalizeSmtpPassword(host, user, pass){
 }
 
 function buildTransport(smtpConfig = {}){
-    const host = String(smtpConfig.host || process.env.SMTP_HOST || "").trim();
-    const port = Number(smtpConfig.port || process.env.SMTP_PORT || 587);
-    const secure = toBool(smtpConfig.secure, toBool(process.env.SMTP_SECURE, false));
-    const user = String(smtpConfig.user || process.env.SMTP_USER || "").trim();
+    const hasExplicitConfig = smtpConfig && typeof smtpConfig === "object" && Object.keys(smtpConfig).length > 0;
+    const host = String(hasExplicitConfig ? (smtpConfig.host || "") : (process.env.SMTP_HOST || "")).trim();
+    const port = Number(hasExplicitConfig ? (smtpConfig.port || 587) : (process.env.SMTP_PORT || 587));
+    const secure = hasExplicitConfig
+        ? toBool(smtpConfig.secure, false)
+        : toBool(process.env.SMTP_SECURE, false);
+    const user = String(hasExplicitConfig ? (smtpConfig.user || "") : (process.env.SMTP_USER || "")).trim();
     const pass = normalizeSmtpPassword(
         host,
         user,
-        String(smtpConfig.pass || process.env.SMTP_PASS || "").trim()
+        String(hasExplicitConfig ? (smtpConfig.pass || "") : (process.env.SMTP_PASS || "")).trim()
     );
 
     return nodemailer.createTransport({
@@ -54,6 +57,16 @@ function isAuthError(err){
     const responseCode = Number(err?.responseCode || 0);
     const msg = String(err?.message || "");
     return code === "EAUTH" || responseCode === 535 || /badcredentials|invalid login|username and password not accepted/i.test(msg);
+}
+
+function maskEmail(value){
+    const raw = String(value || "").trim().toLowerCase();
+    const at = raw.indexOf("@");
+    if(at <= 1) return raw || "(empty)";
+    const name = raw.slice(0, at);
+    const domain = raw.slice(at + 1);
+    const shown = name.length <= 2 ? `${name[0]}*` : `${name.slice(0, 2)}***`;
+    return `${shown}@${domain}`;
 }
 
 async function sendWithTransport(config, mailOptions){
@@ -95,13 +108,20 @@ async function sendEmail({ to, subject, text, html, attachments, smtpConfig, fro
         }
         if(isAuthError(err)){
             const host = String(baseConfig.host || process.env.SMTP_HOST || "").trim().toLowerCase();
+            const userMasked = maskEmail(baseConfig.user || process.env.SMTP_USER || "");
+            const port = Number(baseConfig.port || process.env.SMTP_PORT || 587);
+            const secure = toBool(baseConfig.secure, toBool(process.env.SMTP_SECURE, false));
             if(isGmailLikeHost(host)){
                 throw new Error(
                     "Gmail SMTP authentication failed (535). Use Gmail App Password (16 chars, no spaces), not normal Gmail password. " +
-                    "Required: 2-Step Verification ON, host smtp.gmail.com, and either port 587 + Secure OFF or port 465 + Secure ON."
+                    `Required: 2-Step Verification ON, host smtp.gmail.com, and either port 587 + Secure OFF or port 465 + Secure ON. ` +
+                    `Attempted host=${host || "(empty)"} port=${port} secure=${secure ? "ON" : "OFF"} user=${userMasked}.`
                 );
             }
-            throw new Error("SMTP authentication failed (535). Check SMTP user/password and secure/port settings.");
+            throw new Error(
+                `SMTP authentication failed (535). Check SMTP user/password and secure/port settings. ` +
+                `Attempted host=${host || "(empty)"} port=${port} secure=${secure ? "ON" : "OFF"} user=${userMasked}.`
+            );
         }
         console.error("Email error:", err);
         throw err;

@@ -5,7 +5,7 @@ const UiSetting = db.define(
   "UiSetting",
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    app_name: { type: DataTypes.STRING(120), allowNull: false, defaultValue: "PULMO TECHNOLOGIES" },
+    app_name: { type: DataTypes.STRING(120), allowNull: false, defaultValue: "AXIS PRODUCTION" },
     footer_text: {
       type: DataTypes.STRING(255),
       allowNull: false,

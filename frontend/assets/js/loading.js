@@ -1,5 +1,5 @@
 /*
-  System: PULMO WEB SYSTEM
+  System: AXIS PRODUCTION SYSTEM
   Owner : CRONIT SOLLUTIONS
   Author: JMR Prasanna
 */
@@ -8,7 +8,7 @@
 
     var LOADER_DELAY_MS = 1800;
     var titleEl = document.querySelector(".loading-text");
-    var baseText = titleEl ? titleEl.textContent.replace(/\.+\s*$/, "").trim() : "Starting AXIS WEB SYSTEM";
+    var baseText = titleEl ? titleEl.textContent.replace(/\.+\s*$/, "").trim() : "Starting AXIS PRODUCTION SYSTEM";
     var dotFrame = 0;
 
     if (titleEl) {

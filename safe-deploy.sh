@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/var/www/pulmo_web_UI}"
+APP_DIR="${APP_DIR:-/var/www/axis_production}"
 BRANCH="${1:-main}"
 DBS="${DBS:-inventory,demo}"
-PM2_NAME="${PM2_NAME:-pulmo-backend}"
+PM2_NAME="${PM2_NAME:-axis-production-backend}"
 API_HEALTH_URL="${API_HEALTH_URL:-http://127.0.0.1:5000/api/health}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-20}"
 HEALTH_DELAY_SECONDS="${HEALTH_DELAY_SECONDS:-2}"

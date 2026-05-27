@@ -1,7 +1,7 @@
 {
-  "name": "pulmotech_inhouse",
+  "name": "axis_production",
   "version": "1.0.0",
-  "description": "pulmotech_inhouse - IT Inventory & Business Management System with Node.js, Express, PostgreSQL, and Modern UI",
+  "description": "axis_production - IT Inventory & Business Management System with Node.js, Express, PostgreSQL, and Modern UI",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
@@ -30,6 +30,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "googleapis": "^150.0.1",
     "jsonwebtoken": "^9.0.1",
     "jspdf": "^4.2.0",
     "nodemailer": "^8.0.2",

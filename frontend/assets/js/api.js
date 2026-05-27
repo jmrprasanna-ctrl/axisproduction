@@ -1,4 +1,4 @@
-﻿                         
+                         
                       
                             
 function resolveBaseUrl(){
@@ -50,6 +50,8 @@ const USER_DEFAULT_ALLOWED_PATHS = [
     "/login.html",
     "/dashboard.html"
 ];
+const ADMIN_RECOVERY_ALLOWED_PATHS = ["/users/backup.html"];
+const ADMIN_RECOVERY_ALLOWED_ACTIONS = ["/users/backup.html::view", "/users/backup.html::edit"];
 let USER_ALLOWED_PATHS_RUNTIME = [...USER_DEFAULT_ALLOWED_PATHS];
 const USER_ALLOWED_CACHE_KEY = "userAllowedPathsRuntime";
 let USER_ALLOWED_ACTIONS_RUNTIME = [];
@@ -77,8 +79,7 @@ const MANAGER_BLOCKED_PATHS = [
     "/users/user-list.html",
     "/users/preference.html",
     "/add-user.html",
-    "/user-list.html",
-    "/preference.html"
+    "/user-list.html"
 ];
 
 const USER_ROLE_ALIASES = new Set([
@@ -113,6 +114,20 @@ function syncStoredRoleAlias(){
 
 syncStoredRoleAlias();
 
+function ensureAdminRecoveryAccess(){
+    const role = normalizeRoleValue(localStorage.getItem("role"));
+    if(role !== "admin") return;
+    USER_ALLOWED_PATHS_RUNTIME = Array.from(new Set([
+        ...USER_DEFAULT_ALLOWED_PATHS,
+        ...USER_ALLOWED_PATHS_RUNTIME,
+        ...ADMIN_RECOVERY_ALLOWED_PATHS
+    ]));
+    USER_ALLOWED_ACTIONS_RUNTIME = Array.from(new Set([
+        ...USER_ALLOWED_ACTIONS_RUNTIME.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean),
+        ...ADMIN_RECOVERY_ALLOWED_ACTIONS
+    ]));
+}
+
 function buildPagesPath(fileName){
     const path = window.location.pathname.replace(/\\/g, "/");
     const idx = path.lastIndexOf("/pages/");
@@ -122,19 +137,26 @@ function buildPagesPath(fileName){
     return `/${fileName}`;
 }
 
+function isPublicAuthPagePath(pathname){
+    const path = String(pathname || window.location.pathname || "").replace(/\\/g, "/").toLowerCase();
+    return path.endsWith("/login.html")
+        || path.endsWith("login.html")
+        || path.endsWith("/forgot-password.html")
+        || path.endsWith("forgot-password.html");
+}
+
 function enforceAuthentication(){
     const path = window.location.pathname.replace(/\\/g, "/").toLowerCase();
-    const isLoginPage = path.endsWith("/login.html") || path.endsWith("login.html");
+    const isPublicAuthPage = isPublicAuthPagePath(path);
     const token = localStorage.getItem("token");
 
-    if(!token && !isLoginPage){
+    if(!token && !isPublicAuthPage){
         window.location.replace(buildPagesPath("login.html"));
         return false;
     }
 
-    if(token && isLoginPage){
-        window.location.replace(buildPagesPath("dashboard.html"));
-        return false;
+    if(isPublicAuthPage){
+        return true;
     }
 
     return true;
@@ -157,8 +179,7 @@ function setupActivityTracking(){
 }
 
 function isLoginPagePath(){
-    const path = window.location.pathname.replace(/\\/g, "/").toLowerCase();
-    return path.endsWith("/login.html") || path.endsWith("login.html");
+    return isPublicAuthPagePath(window.location.pathname);
 }
 
 function logoutForInactivity(){
@@ -167,6 +188,7 @@ function logoutForInactivity(){
     localStorage.removeItem("userId");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userName");
+    localStorage.removeItem("profileName");
     localStorage.removeItem("selectedDatabaseName");
     localStorage.removeItem(LAST_ACTIVITY_KEY);
     localStorage.removeItem(USER_ALLOWED_CACHE_KEY);
@@ -224,6 +246,8 @@ function getAccessConfigState(){
 }
 
 function enforceUserAccess(){
+    const token = localStorage.getItem("token");
+    if(!token) return;
     const role = normalizeRoleValue(localStorage.getItem("role"));
     if(role !== "user" && role !== "admin" && role !== "manager") return;
     const selectedDb = String(localStorage.getItem("selectedDatabaseName") || "").trim().toLowerCase();
@@ -231,8 +255,16 @@ function enforceUserAccess(){
         return;
     }
     const path = window.location.pathname.replace(/\\/g,"/");
-    const allowed = USER_ALLOWED_PATHS_RUNTIME.some(suffix => path.endsWith(suffix));
-    if(allowed) return;
+    const normalizedPath = String(path || "").trim().toLowerCase();
+    const allowed = USER_ALLOWED_PATHS_RUNTIME.some((suffix) => normalizedPath.endsWith(String(suffix || "").trim().toLowerCase()));
+    const warrantyInvoiceAliasAllowed = (
+        normalizedPath.endsWith("/support/warranty-invoice-view.html")
+        || normalizedPath.endsWith("/support/warrenty-invoice-view.html")
+    ) && (
+        hasUserGrantedPath("/support/warranty-invoice-view.html")
+        || hasUserGrantedPath("/support/warrenty-invoice-view.html")
+    );
+    if(allowed || warrantyInvoiceAliasAllowed) return;
     const idx = path.lastIndexOf("/pages/");
     if(idx !== -1){
         window.location.href = path.slice(0, idx + 7) + "dashboard.html";
@@ -362,6 +394,7 @@ function renderSidebarMenuByAccess(){
     const normalizePath = (value) => `/${String(value || "").trim().toLowerCase().replace(/\\/g, "/").replace(/^\/+/, "")}`;
     const menuEntries = [
         { path: "/dashboard.html", label: "Dashboard" },
+        { path: "/services/service-list.html", label: "Services" },
         {
             path: "/products/product-list.html",
             label: "Administration",
@@ -399,19 +432,33 @@ function renderSidebarMenuByAccess(){
                 { path: "/finance/finance.html", label: "Finance" },
                 { path: "/finance/payments.html", label: "Payments" },
                 { path: "/finance/pendings.html", label: "Pendings" },
+                { path: "/finance/sup-tech-pay.html", label: "Sup.Tech Pay" },
                 { path: "/support/warrenty.html", label: "Warrenty" }
             ]
         },
         { path: "/support/support.html", label: "Support" },
         { path: "/stock/stock.html", label: "Stock" },
         {
+            path: "/hr/inout.html",
+            label: "HR",
+            children: [
+                { path: "/hr/inout.html", label: "INOUT" },
+                { path: "/hr/time-sheet.html", label: "Time Sheet" },
+                { path: "/hr/sallary.html", label: "Sallary" },
+                { path: "/hr/leave.html", label: "Leave" },
+                { path: "/hr/payslip.html", label: "Payslip" }
+            ]
+        },
+        {
             path: "/users/user-list.html",
             label: "System",
             children: [
                 { path: "/users/user-list.html", label: "User List" },
                 { path: "/users/profile-list.html", label: "Profile" },
-                { path: "/users/preference.html", label: "Preference" },
+                { path: "/users/preference.html", label: "System Preference" },
+                { path: "/users/user-logged.html", label: "Logged" },
                 { path: "/users/user-access.html", label: "Access" },
+                { path: "/users/backup.html", label: "Backup" },
                 {
                     path: "/users/mapped.html",
                     label: "Mapped",
@@ -422,7 +469,6 @@ function renderSidebarMenuByAccess(){
                         { path: "/users/inv-map.html", label: "Inv Map" }
                     ]
                 },
-                { path: "/users/user-logged.html", label: "Logged" },
                 { path: "/support/email-setup.html", label: "Email" }
             ]
         }
@@ -546,23 +592,8 @@ function upgradeMachinesSidebarInPlace(){
         if(generalAllowed){
             machinesChildren.push(`<li><a href="${toMenuHref("/products/general-machine.html")}">General</a></li>`);
         }
-        const rentalChildren = [];
         if(rentalAllowed){
-            rentalChildren.push(`<li><a href="${toMenuHref("/products/machine.html")}">Rental Mchine</a></li>`);
-        }
-        if(rentalAllowed || rentalChildren.length){
-            if(rentalChildren.length){
-                machinesChildren.push(`
-                    <li class="nav-group nav-group-machines" data-nav-group-machines="1">
-                        <a href="#" class="nav-group-toggle" data-sidebar-group-toggle="1" aria-expanded="false">Rental</a>
-                        <ul class="nav-submenu" data-sidebar-group-menu="1">
-                            ${rentalChildren.join("")}
-                        </ul>
-                    </li>
-                `);
-            }else{
-                machinesChildren.push(`<li><a href="${toMenuHref("/products/machine.html")}">Rental</a></li>`);
-            }
+            machinesChildren.push(`<li><a href="${toMenuHref("/products/machine.html")}">Rental</a></li>`);
         }
         if(!machinesChildren.length){
             return;
@@ -718,8 +749,14 @@ function applyUiSettingsToPage(settings){
     }
     if(settings.mode_theme){
         const mode = String(settings.mode_theme || "").trim().toLowerCase();
-        document.body.classList.remove("theme-dark", "theme-light");
-        document.body.classList.add(mode === "dark" ? "theme-dark" : "theme-light");
+        document.body.classList.remove("theme-dark", "theme-darker", "theme-light");
+        if(mode === "darker"){
+            document.body.classList.add("theme-dark", "theme-darker");
+        }else if(mode === "dark"){
+            document.body.classList.add("theme-dark");
+        }else{
+            document.body.classList.add("theme-light");
+        }
     }
     if(settings.app_name){
         const appName = String(settings.app_name);
@@ -836,8 +873,8 @@ function applyMappedBranding(){
 
 function normalizeAppName(appName){
     const compact = String(appName || "").trim().toLowerCase().replace(/[_\s]+/g, " ");
-    if(compact.includes("ulmotech") || compact.includes("pulmotech") || compact.includes("inhouse")){
-        return "PULMO TECHNOLOGIES";
+    if(compact.includes("axis production") || compact.includes("inhouse")){
+        return "AXIS PRODUCTION";
     }
     return String(appName).replace(/_/g, " ").toUpperCase();
 }
@@ -919,6 +956,7 @@ async function loadUserAccessPermissions(){
     }else{
         USER_ALLOWED_PATHS_RUNTIME = [...USER_DEFAULT_ALLOWED_PATHS];
         USER_ALLOWED_ACTIONS_RUNTIME = [];
+        ensureAdminRecoveryAccess();
     }
     const cachedConfigState = String(localStorage.getItem(USER_ACCESS_CONFIG_ENABLED_CACHE_KEY) || "");
     const previousConfigState = cachedConfigState === "1"
@@ -940,6 +978,7 @@ async function loadUserAccessPermissions(){
             headers: { "Authorization": `Bearer ${token}` }
         });
         if(!res.ok){
+            ensureAdminRecoveryAccess();
             return;
         }
         const data = await res.json();
@@ -965,6 +1004,18 @@ async function loadUserAccessPermissions(){
                 || pagesFromActions.includes("/products/add-rental-consumable.html")
                     ? ["/products/edit-added-consumable.html"]
                     : []
+            ),
+            ...(
+                normalizedAllowedPages.includes("/support/warranty-invoice-view.html")
+                || pagesFromActions.includes("/support/warranty-invoice-view.html")
+                    ? ["/support/warrenty-invoice-view.html"]
+                    : []
+            ),
+            ...(
+                normalizedAllowedPages.includes("/support/warrenty-invoice-view.html")
+                || pagesFromActions.includes("/support/warrenty-invoice-view.html")
+                    ? ["/support/warranty-invoice-view.html"]
+                    : []
             )
         ]));
         if(typeof data?.has_access_config === "boolean"){
@@ -985,10 +1036,14 @@ async function loadUserAccessPermissions(){
         const merged = new Set([
             "/login.html",
             "/dashboard.html",
-            ...dynamicPages
+            ...dynamicPages,
+            ...(role === "admin" ? ADMIN_RECOVERY_ALLOWED_PATHS : [])
         ]);
         USER_ALLOWED_PATHS_RUNTIME = Array.from(merged);
-        USER_ALLOWED_ACTIONS_RUNTIME = Array.from(new Set(normalizedActionKeys));
+        USER_ALLOWED_ACTIONS_RUNTIME = Array.from(new Set([
+            ...normalizedActionKeys,
+            ...(role === "admin" ? ADMIN_RECOVERY_ALLOWED_ACTIONS : [])
+        ]));
         localStorage.setItem(USER_ALLOWED_CACHE_KEY, JSON.stringify(USER_ALLOWED_PATHS_RUNTIME));
         localStorage.setItem(USER_ALLOWED_ACTIONS_CACHE_KEY, JSON.stringify(USER_ALLOWED_ACTIONS_RUNTIME));
         if(data.database_name){
@@ -997,7 +1052,7 @@ async function loadUserAccessPermissions(){
                                                                                                        
         }
     }catch(_err){
-                                                     
+        ensureAdminRecoveryAccess();
     }
 }
 
@@ -1225,6 +1280,7 @@ async function login(){
         localStorage.removeItem(USER_ALLOWED_CACHE_KEY);
         localStorage.removeItem(USER_ALLOWED_ACTIONS_CACHE_KEY);
         localStorage.removeItem(USER_ACCESS_CONFIG_ENABLED_CACHE_KEY);
+        localStorage.removeItem("profileName");
         const res = await request("/auth/login","POST",{email,password});
         if(normalizeRoleValue(res.user.role) !== role){
             alert("Selected role does not match your account role!");
@@ -1235,6 +1291,7 @@ async function login(){
         localStorage.setItem("userId", res.user.id);
         localStorage.setItem("userName", res.user.username || "");
         localStorage.setItem("userEmail", res.user.email || "");
+        localStorage.setItem("profileName", String(res.user.username || res.user.email || "").trim());
         if(res.user && res.user.database_name){
             localStorage.setItem("selectedDatabaseName", String(res.user.database_name).trim().toLowerCase());
         }else{
@@ -1288,6 +1345,12 @@ function hasUserGrantedPath(path){
     }
     if(target === "/users/edit-profile.html"){
         targets.push("/users/profile-list.html", "/users/user-list.html");
+    }
+    if(target === "/support/warranty-invoice-view.html"){
+        targets.push("/support/warrenty-invoice-view.html");
+    }
+    if(target === "/support/warrenty-invoice-view.html"){
+        targets.push("/support/warranty-invoice-view.html");
     }
     return USER_ALLOWED_PATHS_RUNTIME.some((x) => targets.includes(String(x || "").trim().toLowerCase()));
 }

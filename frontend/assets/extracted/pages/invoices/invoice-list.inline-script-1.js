@@ -1,34 +1,88 @@
 const invoiceSearchEl = document.getElementById("invoiceSearch");
 const invoiceYearEl = document.getElementById("invoiceYearFilter");
+const invoiceMonthEl = document.getElementById("invoiceMonthFilter");
 const addInvoiceBtn = document.getElementById("addInvoiceBtn");
 let allInvoices = [];
-let selectedYear = String(new Date().getFullYear());
+const MONTH_SHORT = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const MONTH_LONG = [
+    "JANUARY",
+    "FEBRUARY",
+    "MARCH",
+    "APRIL",
+    "MAY",
+    "JUNE",
+    "JULY",
+    "AUGUST",
+    "SEPTEMBER",
+    "OCTOBER",
+    "NOVEMBER",
+    "DECEMBER"
+];
+let selectedYear = "";
+let selectedMonth = "";
 
-        function getInvoiceYear(inv){
+        function getInvoiceDate(inv){
             const raw = String(inv?.invoice_date || "").trim();
-            if(!raw) return "";
+            if(!raw) return null;
             const dt = new Date(raw);
-            if(Number.isNaN(dt.getTime())) return "";
+            if(Number.isNaN(dt.getTime())) return null;
+            return dt;
+        }
+
+        function getInvoiceYearKey(inv){
+            const dt = getInvoiceDate(inv);
+            if(!dt) return "";
             return String(dt.getFullYear());
+        }
+
+        function getInvoiceMonthKey(inv){
+            const dt = getInvoiceDate(inv);
+            if(!dt) return "";
+            return String(dt.getMonth() + 1).padStart(2, "0");
         }
 
         function initYearFilter(){
             if(!invoiceYearEl) return;
-            const years = new Set([selectedYear]);
+            const years = new Set();
             allInvoices.forEach(inv => {
-                const y = getInvoiceYear(inv);
-                if(y) years.add(y);
+                const year = getInvoiceYearKey(inv);
+                if(year) years.add(year);
             });
-            const sortedYears = Array.from(years).sort((a, b) => Number(b) - Number(a));
+            const sortedYears = Array.from(years).sort((a, b) => b.localeCompare(a));
             invoiceYearEl.innerHTML = "";
-            sortedYears.forEach(y => {
+            const allOption = document.createElement("option");
+            allOption.value = "";
+            allOption.textContent = "All Years";
+            invoiceYearEl.appendChild(allOption);
+            sortedYears.forEach(year => {
                 const opt = document.createElement("option");
-                opt.value = y;
-                opt.textContent = y;
+                opt.value = year;
+                opt.textContent = year;
                 invoiceYearEl.appendChild(opt);
             });
-            invoiceYearEl.value = sortedYears.includes(selectedYear) ? selectedYear : sortedYears[0];
-            selectedYear = String(invoiceYearEl.value || selectedYear);
+            // Default: show invoices for all years.
+            selectedYear = "";
+            invoiceYearEl.value = selectedYear;
+        }
+
+        function initMonthFilter(){
+            if(!invoiceMonthEl) return;
+            invoiceMonthEl.innerHTML = "";
+            const allOption = document.createElement("option");
+            allOption.value = "";
+            allOption.textContent = "All Months";
+            invoiceMonthEl.appendChild(allOption);
+
+            MONTH_SHORT.forEach((label, index) => {
+                const monthKey = String(index + 1).padStart(2, "0");
+                const opt = document.createElement("option");
+                opt.value = monthKey;
+                opt.textContent = label;
+                invoiceMonthEl.appendChild(opt);
+            });
+
+            selectedMonth = "";
+            invoiceMonthEl.value = selectedMonth;
         }
 
         function renderInvoices(invoices){
@@ -61,15 +115,24 @@ let selectedYear = String(new Date().getFullYear());
         function applyInvoiceFilter(){
             const query = (invoiceSearchEl?.value || "").trim().toLowerCase();
             const year = String(selectedYear || "").trim();
+            const month = String(selectedMonth || "").trim();
             const filtered = allInvoices.filter(inv => {
-                if(year && getInvoiceYear(inv) !== year) return false;
-                const dateText = inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : "";
+                if(year && getInvoiceYearKey(inv) !== year) return false;
+                if(month && getInvoiceMonthKey(inv) !== month) return false;
+                const dt = getInvoiceDate(inv);
+                const dateText = dt ? dt.toLocaleDateString() : "";
+                const monthShort = dt ? MONTH_SHORT[dt.getMonth()] : "";
+                const monthLong = dt ? MONTH_LONG[dt.getMonth()] : "";
+                const yearMonth = dt ? `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}` : "";
                 if(!query) return true;
                 return [
                     inv.invoice_no,
                     inv.customer_name,
                     dateText,
-                    inv.total
+                    inv.total,
+                    monthShort,
+                    monthLong,
+                    yearMonth
                 ].some(v => String(v || "").toLowerCase().includes(query));
             });
             renderInvoices(filtered);
@@ -79,6 +142,7 @@ let selectedYear = String(new Date().getFullYear());
             try{
                 allInvoices = await request("/invoices","GET");
                 initYearFilter();
+                initMonthFilter();
                 applyInvoiceFilter();
             }catch(err){
                 const tbody = document.getElementById('invoice-table-body');
@@ -110,6 +174,12 @@ let selectedYear = String(new Date().getFullYear());
 if(invoiceYearEl){
     invoiceYearEl.addEventListener("change", () => {
         selectedYear = String(invoiceYearEl.value || "");
+        applyInvoiceFilter();
+    });
+}
+if(invoiceMonthEl){
+    invoiceMonthEl.addEventListener("change", () => {
+        selectedMonth = String(invoiceMonthEl.value || "");
         applyInvoiceFilter();
     });
 }

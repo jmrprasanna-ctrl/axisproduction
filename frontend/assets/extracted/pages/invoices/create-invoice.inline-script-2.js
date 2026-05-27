@@ -8,7 +8,7 @@ const DEFAULT_IMPORTANT_NOTES = selectedDb === "demo"
         "Ex-stock-subject to prior sale of Supply of items."
     ]
     : [
-        "Cheque's are to be drawn in favor of PULMO TECHNOLOGIES (1000606391) and crossed A/C Payee only.",
+        "Cheque's are to be drawn in favor of AXIS PRODUCTION (1000606391) and crossed A/C Payee only.",
         "Ex-stock-subject to prior sale of Supply of items."
     ];
 let importantNotes = [...DEFAULT_IMPORTANT_NOTES];
@@ -106,13 +106,40 @@ function resetDefaultImportantNotes(){
     renderImportantTable();
 }
 
+function applySupTechVisibility(){
+    const supTechEnabled = document.getElementById("supTechEnabled");
+    const supportFields = Array.from(document.querySelectorAll(".sup-tech-field"));
+    const select = document.getElementById("supportTechnician");
+    const percentageInput = document.getElementById("supportTechnicianPercentage");
+    const enabled = !!(supTechEnabled && supTechEnabled.checked);
+
+    supportFields.forEach((field) => field.classList.toggle("sup-tech-hidden", !enabled));
+
+    if(!enabled){
+        if(select) select.value = "";
+        if(percentageInput){
+            percentageInput.value = "";
+            percentageInput.disabled = true;
+        }
+        return;
+    }
+
+    if(percentageInput){
+        percentageInput.disabled = !select || !select.value;
+    }
+}
+
 async function initSupportTechnicians(){
     const select = document.getElementById("supportTechnician");
     const percentageInput = document.getElementById("supportTechnicianPercentage");
+    const supTechEnabled = document.getElementById("supTechEnabled");
     select.innerHTML = `<option value="">Select Technician (Optional)</option>`;
     if(percentageInput){
         percentageInput.value = "";
         percentageInput.disabled = true;
+    }
+    if(supTechEnabled){
+        supTechEnabled.checked = false;
     }
 
     try{
@@ -128,14 +155,15 @@ async function initSupportTechnicians(){
     }
 
     select.onchange = () => {
-        if(!percentageInput) return;
-        if(select.value){
-            percentageInput.disabled = false;
-        }else{
-            percentageInput.value = "";
-            percentageInput.disabled = true;
-        }
+        applySupTechVisibility();
     };
+
+    if(supTechEnabled){
+        supTechEnabled.onchange = () => {
+            applySupTechVisibility();
+        };
+    }
+    applySupTechVisibility();
 }
 
 function clearCustomerDetails(){
@@ -633,10 +661,11 @@ document.getElementById("invoiceForm").addEventListener("submit", async function
     const serialNo = document.getElementById("machineSerialNo").value.trim();
     const countValue = document.getElementById("count").value;
     const supportTechSelect = document.getElementById("supportTechnician");
-    const supportTechName = supportTechSelect.value
+    const supTechEnabled = !!document.getElementById("supTechEnabled")?.checked;
+    const supportTechName = supTechEnabled && supportTechSelect.value
         ? (supportTechSelect.options[supportTechSelect.selectedIndex]?.text || "")
         : "";
-    const supportTechPercentageRaw = document.getElementById("supportTechnicianPercentage").value;
+    const supportTechPercentageRaw = supTechEnabled ? document.getElementById("supportTechnicianPercentage").value : "";
     const supportTechPercentage = supportTechPercentageRaw === "" ? null : Number(supportTechPercentageRaw);
     const paymentMethod = document.getElementById("paymentMethod").value || "Cash";
     const invoiceNo = document.getElementById("invoiceNo").value;
@@ -671,7 +700,7 @@ document.getElementById("invoiceForm").addEventListener("submit", async function
             serial_no: serialNo,
             machine_count: countValue === "" ? null : Number(countValue),
             support_technician: supportTechName,
-            support_technician_percentage: supportTechName ? supportTechPercentage : null,
+            support_technician_percentage: supTechEnabled && supportTechName ? supportTechPercentage : null,
             payment_method: paymentMethod,
             items
         });
@@ -701,7 +730,7 @@ document.getElementById("invoiceForm").addEventListener("submit", async function
                         serial_no: serialNo,
                         machine_count: countValue === "" ? null : Number(countValue),
                         support_technician: supportTechName,
-                        support_technician_percentage: supportTechName ? supportTechPercentage : null,
+                        support_technician_percentage: supTechEnabled && supportTechName ? supportTechPercentage : null,
                         payment_method: paymentMethod,
                         items
                     });
@@ -734,11 +763,11 @@ async function generatePDF(invoiceNo, customerName, machineRef, items){
         doc.addImage(PULMO_LOGO_DATA_URL, "JPEG", 15, 10, 60, 20);
     }
     doc.setFontSize(16);
-    doc.text("PULMO TECHNOLOGIES", 120, 18);
+    doc.text("AXIS PRODUCTION", 120, 18);
     doc.setFontSize(10);
     doc.text("No 30/1, Muddaragama, Veyangoda", 120, 24);
     doc.text("TEL : 0770 3000 80", 120, 29);
-    doc.text("pulmotechnologies@gmail.com", 120, 34);
+    doc.text("info@axisproduction.com", 120, 34);
 
     doc.setFontSize(18);
     doc.text("INVOICE", 105, 50, { align: "center" });
@@ -829,7 +858,7 @@ async function generatePDF(invoiceNo, customerName, machineRef, items){
 
                             
     doc.rect(15, 268, 180, 20);
-    doc.text("For PULMO TECHNOLOGIES", 18, 274);
+    doc.text("For AXIS PRODUCTION", 18, 274);
     doc.text("SEAL", 90, 274);
     doc.text("Received above items in good condition.", 120, 274);
     doc.text("Authorized By", 18, 286);

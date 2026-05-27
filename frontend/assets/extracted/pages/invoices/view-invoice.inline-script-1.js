@@ -95,18 +95,18 @@ const POS = {
 };
 const ADDRESS_TEXTS = {
     colombo: [
-        "PULMO TECHNOLOGIES",
+        "AXIS PRODUCTION",
         "No 528/48, 2nd Maradana, Colombo 10.",
         "TEL : 0770 3000 80",
-        "pulmotechnologies@gmail.com",
-        "www.pulmotech.lk"
+        "info@axisproduction.com",
+        "www.axisproduction.com"
     ],
     v: [
-        "PULMO TECHNOLOGIES",
+        "AXIS PRODUCTION",
         "No 30/1, Muddaragama, Veyangoda.",
         "TEL : 0770 3000 80",
-        "pulmotechnologies@gmail.com",
-        "www.pulmotech.lk"
+        "info@axisproduction.com",
+        "www.axisproduction.com"
     ]
 };
 let selectedAddressKey = "v";
@@ -1076,6 +1076,18 @@ function initLogoWithNameControl(){
     });
 }
 
+function initSupportTechnicianControl(){
+    const supTechChk = document.getElementById("supportTechnicianChk");
+    if(!supTechChk) return;
+    supTechChk.checked = false;
+    getLayoutConfig("supportTechnician").visible = false;
+
+    supTechChk.addEventListener("change", async () => {
+        getLayoutConfig("supportTechnician").visible = !!supTechChk.checked;
+        await refreshPreviewFromLatest();
+    });
+}
+
 function syncLayoutEditorSelects(){
     const fontSelect = document.getElementById("layoutFontSelect");
     const fontFamilySelect = document.getElementById("layoutFontFamilySelect");
@@ -1361,15 +1373,42 @@ function openQuotationPage(version){
         alert("Invoice id is missing.");
         return;
     }
+    const canOpenPath = (path) => {
+        if(typeof hasUserGrantedPath !== "function") return true;
+        return hasUserGrantedPath(path);
+    };
     if(Number(version) === 2){
+        if(!canOpenPath("/invoices/view-quotation-2.html")){
+            alert("You do not have access to QUT2.");
+            return;
+        }
         window.location.href = `view-quotation-2.html?id=${invoiceId}`;
         return;
     }
     if(Number(version) === 3){
+        if(!canOpenPath("/invoices/view-quotation-3.html")){
+            alert("You do not have access to QUT3.");
+            return;
+        }
         window.location.href = `view-quotation-3.html?id=${invoiceId}`;
         return;
     }
     window.location.href = `view-quotation.html?id=${invoiceId}`;
+}
+
+function applyQuotationButtonAccess(){
+    const canOpenPath = (path) => {
+        if(typeof hasUserGrantedPath !== "function") return true;
+        return hasUserGrantedPath(path);
+    };
+    const qut2Btn = document.getElementById("openQut2Btn");
+    const qut3Btn = document.getElementById("openQut3Btn");
+    if(qut2Btn){
+        qut2Btn.style.display = canOpenPath("/invoices/view-quotation-2.html") ? "" : "none";
+    }
+    if(qut3Btn){
+        qut3Btn.style.display = canOpenPath("/invoices/view-quotation-3.html") ? "" : "none";
+    }
 }
 
 function waitForIframeLoad(frame){
@@ -1440,11 +1479,14 @@ window.addEventListener("DOMContentLoaded", async () => {
         initSealControl();
         initSealVControl();
         initLogoWithNameControl();
+        initSupportTechnicianControl();
         initLayoutEditor();
     }
     const deleteBtn = document.getElementById("deleteInvoiceBtn");
     if(deleteBtn){
         deleteBtn.style.display = currentRole === "admin" ? "inline-grid" : "none";
     }
+    applyQuotationButtonAccess();
+    document.addEventListener("app:user-access-ready", applyQuotationButtonAccess);
     renderInvoice();
 });

@@ -1,0 +1,90 @@
+<!--
+  System: AXIS PRODUCTION SYSTEM
+  Owner : CRONIT SOLLUTIONS
+  Author: JMR Prasanna
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sup.Tech Pay - AXIS PRODUCTION</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+<link rel="stylesheet" href="../../assets/css/dashboard.css">
+<link rel="stylesheet" href="../../assets/css/sup-tech-pay.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <img src="../../assets/images/logo.png" alt="Logo">
+        <span>AXIS PRODUCTION</span>
+    </div>
+    <ul class="nav-links">
+        <li><a href="../dashboard.html">Dashboard</a></li>
+        <li><a href="../products/product-list.html">Products</a></li>
+        <li><a href="../products/general-machine.html">Machines</a></li>
+        <li><a href="../customers/customer-list.html">Customers</a></li>
+        <li><a href="../invoices/invoice-list.html">Invoices</a></li>
+        <li><a href="../vendors/list-vendor.html">Vendors</a></li>
+        <li><a href="../expenses/expense-list.html">Expenses</a></li>
+        <li><a href="../reports/sales-report.html">Reports</a></li>
+        <li><a href="../analytics/sales-chart.html">Analytics</a></li>
+        <li><a href="finance.html">Finance</a></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <header class="page-head">
+        <h2>Sup.Tech Pay</h2>
+        <a class="icon-btn" href="../dashboard.html" aria-label="Back to Dashboard" title="Back to Dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </header>
+
+    <div class="form-container">
+        <div class="toolbar">
+            <div class="field search-field">
+                <input type="text" id="supTechSearch" placeholder="Invoice no, customer, technician">
+            </div>
+            <div class="field technician-filter-field">
+                <select id="supTechTechnicianFilter">
+                    <option value="">All Support Technicians</option>
+                </select>
+            </div>
+            <button type="button" class="icon-btn toolbar-icon-btn" id="saveSupTechPayTablePdfBtn" aria-label="Save table as PDF" title="Save table as PDF">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 3.5h9l3 3V20.5H6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M15 3.5v4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M8.5 14.2h2.1a1.5 1.5 0 1 0 0-3H8.5v5.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M13.2 11.2h2.2v5.4h-2.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="table-scroll">
+            <table id="supTechPayTable">
+                <thead>
+                    <tr>
+                        <th>Invoice No</th>
+                        <th>Customer</th>
+                        <th>Invoice Date</th>
+                        <th>Support Technician</th>
+                        <th>Invoice Amount</th>
+                        <th>Sup.Tech Pay</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="supTechPayBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="../../assets/js/api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="../../assets/js/sup-tech-pay.js"></script>
+</body>
+</html>

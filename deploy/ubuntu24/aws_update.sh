@@ -1,8 +1,8 @@
 set -euo pipefail
 
 BRANCH="${1:-main}"
-APP_DIR="${APP_DIR:-/var/www/pulmo_web_UI}"
-PM2_NAME="${PM2_NAME:-pulmo-backend}"
+APP_DIR="${APP_DIR:-/var/www/axis_production}"
+PM2_NAME="${PM2_NAME:-axis-production-backend}"
 API_HEALTH_URL="${API_HEALTH_URL:-http://127.0.0.1:5000/api/health}"
 WEB_HEALTH_URL="${WEB_HEALTH_URL:-http://127.0.0.1}"
 RUN_DB_CLEANUP="${RUN_DB_CLEANUP:-false}"

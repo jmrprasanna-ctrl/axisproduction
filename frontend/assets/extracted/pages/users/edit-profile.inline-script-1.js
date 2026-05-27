@@ -33,6 +33,26 @@ function setPreviewFallback(name){
     preview.style.visibility = "visible";
 }
 
+function setFieldContent(id, value){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const finalValue = safeText(value);
+    if("value" in el){
+        el.value = finalValue;
+        return;
+    }
+    el.innerText = finalValue || "-";
+}
+
+function getFieldContent(id){
+    const el = document.getElementById(id);
+    if(!el) return "";
+    if("value" in el){
+        return safeText(el.value);
+    }
+    return safeText(el.innerText);
+}
+
 function toBase64(file){
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -108,9 +128,9 @@ async function loadProfile(){
         document.getElementById("id_number").value = profile.id_number || "";
         document.getElementById("emergency_contact_no").value = profile.emergency_contact_no || "";
         document.getElementById("authoris_officer").value = profile.authoris_officer || "";
-        document.getElementById("metaLoginUser").innerText = profile.login_user || "-";
-        document.getElementById("metaEmail").innerText = profile.email || "-";
-        document.getElementById("metaDepartment").innerText = profile.department || "-";
+        setFieldContent("metaLoginUser", profile.login_user || "-");
+        setFieldContent("metaEmail", profile.email || "-");
+        setFieldContent("metaDepartment", profile.department || "-");
         const fallbackName = profile.profile_name || profile.login_user || "U";
         const hasUploadedPicture = Boolean(safeText(profile.picture_url));
         const preview = document.getElementById("profilePicturePreview");
@@ -147,7 +167,7 @@ function applyViewOnlyState(){
             return;
         }
         el.setAttribute("readonly", "readonly");
-        el.setAttribute("disabled", "disabled");
+        el.removeAttribute("disabled");
     });
     const pictureActions = document.querySelector(".profile-picture-actions");
     if(pictureActions){
@@ -210,7 +230,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                 showMessageBox("Profile picture uploaded");
                 await loadProfilePicture(userId, {
                     preserveOnFail: true,
-                    fallbackName: document.getElementById("profile_name")?.value || document.getElementById("metaLoginUser")?.innerText || "U"
+                    fallbackName: document.getElementById("profile_name")?.value || getFieldContent("metaLoginUser") || "U"
                 });
             }catch(err){
                 alert(err.message || "Failed to upload profile picture");

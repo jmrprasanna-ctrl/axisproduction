@@ -1,4 +1,4 @@
-﻿                         
+                         
                       
                             
 function resolveBaseUrl(){
@@ -77,8 +77,7 @@ const MANAGER_BLOCKED_PATHS = [
     "/users/user-list.html",
     "/users/preference.html",
     "/add-user.html",
-    "/user-list.html",
-    "/preference.html"
+    "/user-list.html"
 ];
 
 const USER_ROLE_ALIASES = new Set([
@@ -399,18 +398,27 @@ function renderSidebarMenuByAccess(){
                 { path: "/finance/finance.html", label: "Finance" },
                 { path: "/finance/payments.html", label: "Payments" },
                 { path: "/finance/pendings.html", label: "Pendings" },
+                { path: "/finance/sup-tech-pay.html", label: "Sup.Tech Pay" },
                 { path: "/support/warrenty.html", label: "Warrenty" }
             ]
         },
         { path: "/support/support.html", label: "Support" },
         { path: "/stock/stock.html", label: "Stock" },
         {
+            path: "/hr/inout.html",
+            label: "HR",
+            children: [
+                { path: "/hr/inout.html", label: "INOUT" },
+                { path: "/hr/time-sheet.html", label: "Time Sheet" }
+            ]
+        },
+        {
             path: "/users/user-list.html",
             label: "System",
             children: [
                 { path: "/users/user-list.html", label: "User List" },
                 { path: "/users/profile-list.html", label: "Profile" },
-                { path: "/users/preference.html", label: "Preference" },
+                { path: "/users/preference.html", label: "System Preference" },
                 { path: "/users/user-access.html", label: "Access" },
                 {
                     path: "/users/mapped.html",
@@ -718,8 +726,14 @@ function applyUiSettingsToPage(settings){
     }
     if(settings.mode_theme){
         const mode = String(settings.mode_theme || "").trim().toLowerCase();
-        document.body.classList.remove("theme-dark", "theme-light");
-        document.body.classList.add(mode === "dark" ? "theme-dark" : "theme-light");
+        document.body.classList.remove("theme-dark", "theme-darker", "theme-light");
+        if(mode === "darker"){
+            document.body.classList.add("theme-dark", "theme-darker");
+        }else if(mode === "dark"){
+            document.body.classList.add("theme-dark");
+        }else{
+            document.body.classList.add("theme-light");
+        }
     }
     if(settings.app_name){
         const appName = String(settings.app_name);
@@ -836,8 +850,8 @@ function applyMappedBranding(){
 
 function normalizeAppName(appName){
     const compact = String(appName || "").trim().toLowerCase().replace(/[_\s]+/g, " ");
-    if(compact.includes("ulmotech") || compact.includes("pulmotech") || compact.includes("inhouse")){
-        return "PULMO TECHNOLOGIES";
+    if(compact.includes("axis production") || compact.includes("inhouse")){
+        return "AXIS PRODUCTION";
     }
     return String(appName).replace(/_/g, " ").toUpperCase();
 }

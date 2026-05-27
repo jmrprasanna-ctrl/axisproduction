@@ -1,5 +1,5 @@
 <!--
-  System: PULMO WEB SYSTEM 
+  System: AXIS PRODUCTION SYSTEM 
   Owner : CRONIT SOLLUTIONS 
   Author: JMR Prasanna
 -->
@@ -8,7 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock - PULMO TECHNOLOGIES</title>
+<title>Stock - AXIS PRODUCTION</title>
 <link rel="stylesheet" href="../../assets/css/style.css">
 <link rel="stylesheet" href="../../assets/css/dashboard.css">
 <link rel="stylesheet" href="../../assets/extracted/pages/stock/stock.inline-style-1.css">
@@ -17,7 +17,7 @@
 <div class="sidebar">
     <div class="logo">
         <img src="../../assets/images/logo.png" alt="Logo">
-        <span>PULMO TECHNOLOGIES</span>
+        <span>AXIS PRODUCTION</span>
     </div>
     <ul class="nav-links">
         <li><a href="../dashboard.html">Dashboard</a></li>
@@ -33,7 +33,14 @@
 </div>
 
 <div class="main-content">
-    <header><h2>Stock Management</h2></header>
+    <header class="stock-page-head">
+        <h2>Stock Management</h2>
+        <a class="icon-btn" href="../dashboard.html" aria-label="Back to dashboard" title="Back to dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </header>
 
     <div class="form-container">
         <div class="report-block">
@@ -58,7 +65,6 @@
                     <input type="text" id="stockSearch" class="search-inline" placeholder="Search Product ID, Description, Category, Model">
                 </div>
             </div>
-            <p class="mini-note">Filter stock by source, model, or keyword. Manage stock directly from each row.</p>
             <div class="table-scroll-wrap">
                 <table id="stockTable">
                     <thead>

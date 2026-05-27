@@ -1,0 +1,119 @@
+<!--
+  System: AXIS PRODUCTION SYSTEM
+  Owner : CRONIT SOLLUTIONS
+  Author: JMR Prasanna
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payslip - AXIS PRODUCTION</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+<link rel="stylesheet" href="../../assets/css/dashboard.css">
+<style>
+    .page-head{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        margin-bottom:16px;
+    }
+    .page-head h2{
+        margin:0;
+    }
+    .payslip-table-wrap{
+        width:100%;
+        overflow:auto;
+        max-height:calc(100vh - 300px);
+        border:1px solid var(--line);
+        border-radius:var(--radius-md);
+        background:#fff;
+    }
+    .payslip-table-wrap table{
+        margin:0;
+        border:0;
+        border-radius:0;
+        min-width:980px;
+    }
+    .payslip-table-wrap thead th{
+        position:sticky;
+        top:0;
+        z-index:1;
+    }
+    .payslip-row-clickable{
+        cursor:pointer;
+    }
+    .payslip-row-clickable:hover{
+        background:#f2f8ff !important;
+    }
+</style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo">
+        <img src="../../assets/images/logo.png" alt="Company Logo">
+        <span>AXIS PRODUCTION</span>
+    </div>
+    <ul class="nav-links">
+        <li><a href="../dashboard.html">Dashboard</a></li>
+        <li><a href="../products/product-list.html">Products</a></li>
+        <li><a href="../products/general-machine.html">Machines</a></li>
+        <li><a href="../customers/customer-list.html">Customers</a></li>
+        <li><a href="../invoices/invoice-list.html">Invoices</a></li>
+        <li><a href="../vendors/list-vendor.html">Vendors</a></li>
+        <li><a href="../expenses/expense-list.html">Expenses</a></li>
+        <li><a href="../reports/sales-report.html">Reports</a></li>
+        <li><a href="../analytics/sales-chart.html">Analytics</a></li>
+        <li><a href="../finance/finance.html">Finance</a></li>
+        <li><a href="../support/support.html">Support</a></li>
+        <li><a href="../stock/stock.html">Stock</a></li>
+        <li><a href="inout.html">INOUT</a></li>
+        <li><a href="time-sheet.html">Time Sheet</a></li>
+        <li><a href="sallary.html">Sallary</a></li>
+        <li><a href="leave.html">Leave</a></li>
+        <li><a href="payslip.html">Payslip</a></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <header class="page-head">
+        <h2>Payslip</h2>
+        <a class="icon-btn" href="../dashboard.html" aria-label="Back to dashboard" title="Back to dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </header>
+
+    <div class="form-container">
+        <div class="toolbar">
+            <div class="field">
+                <label for="payslipMonth">Month</label>
+                <input type="month" id="payslipMonth">
+            </div>
+        </div>
+        <div class="path-hint">Click a user row to open payslip view.</div>
+        <div class="payslip-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Profile Name</th>
+                        <th>Login User</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Email</th>
+                        <th>Employee No</th>
+                        <th>Basic Sallary</th>
+                    </tr>
+                </thead>
+                <tbody id="payslipUsersBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/hr-payslip.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!--
+  System: AXIS PRODUCTION SYSTEM
+  Owner : CRONIT SOLLUTIONS
+  Author: JMR Prasanna
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INOUT - AXIS PRODUCTION</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+<link rel="stylesheet" href="../../assets/css/dashboard.css">
+<style>
+    .main-content .page-head{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        flex-wrap:nowrap;
+        width:100%;
+    }
+    .main-content .page-head h2{
+        margin:0;
+        flex:1 1 auto;
+        min-width:0;
+    }
+    .main-content .page-head .icon-btn{
+        margin-left:auto;
+        flex:0 0 auto;
+    }
+    .inout-grid{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(260px,1fr));
+        gap:12px;
+    }
+    .inout-grid .field label{
+        margin-top:0;
+    }
+    .inout-actions{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        flex-wrap:wrap;
+    }
+    .inout-actions button{
+        margin-top:0;
+    }
+    @media (max-width: 900px){
+        .inout-grid{
+            grid-template-columns:1fr;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo">
+        <img src="../../assets/images/logo.png" alt="Company Logo">
+        <span>AXIS PRODUCTION</span>
+    </div>
+    <ul class="nav-links">
+        <li><a href="../dashboard.html">Dashboard</a></li>
+        <li><a href="../products/product-list.html">Products</a></li>
+        <li><a href="../products/general-machine.html">Machines</a></li>
+        <li><a href="../customers/customer-list.html">Customers</a></li>
+        <li><a href="../invoices/invoice-list.html">Invoices</a></li>
+        <li><a href="../vendors/list-vendor.html">Vendors</a></li>
+        <li><a href="../expenses/expense-list.html">Expenses</a></li>
+        <li><a href="../reports/sales-report.html">Reports</a></li>
+        <li><a href="../analytics/sales-chart.html">Analytics</a></li>
+        <li><a href="../finance/finance.html">Finance</a></li>
+        <li><a href="../support/support.html">Support</a></li>
+        <li><a href="../stock/stock.html">Stock</a></li>
+        <li><a href="inout.html">INOUT</a></li>
+        <li><a href="time-sheet.html">Time Sheet</a></li>
+        <li><a href="sallary.html">Sallary</a></li>
+        <li><a href="leave.html">Leave</a></li>
+        <li><a href="payslip.html">Payslip</a></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <header class="page-head">
+        <h2>INOUT</h2>
+        <a class="icon-btn" href="../dashboard.html" aria-label="Back to dashboard" title="Back to dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </header>
+
+    <div class="form-container">
+        <div class="inout-grid">
+            <div class="field">
+                <label>User</label>
+                <input type="text" id="inoutUserName" readonly>
+            </div>
+            <div class="field">
+                <label>Status</label>
+                <input type="text" id="inoutStatus" readonly>
+            </div>
+            <div class="field">
+                <label>Last In</label>
+                <input type="text" id="lastCheckInAt" readonly>
+            </div>
+            <div class="field">
+                <label>Last Out</label>
+                <input type="text" id="lastCheckOutAt" readonly>
+            </div>
+        </div>
+
+        <div class="inout-actions">
+            <button type="button" id="checkInBtn">Time In</button>
+            <button type="button" class="btn-danger" id="checkOutBtn">Time Out</button>
+        </div>
+        <div class="path-hint" id="gpsHint">Location: Waiting for action...</div>
+
+    </div>
+</div>
+
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/hr-inout.js"></script>
+</body>
+</html>

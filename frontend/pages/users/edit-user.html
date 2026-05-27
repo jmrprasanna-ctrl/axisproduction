@@ -1,5 +1,5 @@
 <!--
-  System: PULMO WEB SYSTEM 
+  System: AXIS PRODUCTION SYSTEM 
   Owner : CRONIT SOLLUTIONS 
   Author: JMR Prasanna
 -->
@@ -8,7 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit User - PULMO TECHNOLOGIES</title>
+    <title>Edit User - AXIS PRODUCTION</title>
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/extracted/pages/users/edit-user.inline-style-1.css">
@@ -35,7 +35,15 @@
                 <input type="text" id="company" placeholder="Enter company name" required>
 
                 <label for="department">Department</label>
-                <input type="text" id="department" placeholder="Enter department" required>
+                <select id="department" required>
+                    <option value="">Select Department</option>
+                    <option value="Manager">Manager</option>
+                    <option value="IT">IT</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Cordinater">Cordinater</option>
+                    <option value="Technician">Technician</option>
+                </select>
 
                 <label for="tel">Telephone</label>
                 <input type="text" id="tel" placeholder="Enter telephone" required>

@@ -3,11 +3,13 @@ const jwt = require("jsonwebtoken");
 const { Client } = require("pg");
 const db = require("../config/database");
 const User = require("../models/User");
+const EmailSetup = require("../models/EmailSetup");
 const { Op } = require("sequelize");
 const { sendEmail } = require("../services/emailService");
 
 const isBcryptHash = (value = "") => /^\$2[aby]\$\d{2}\$/.test(value);
 const AUTH_DB_NAME = String(process.env.DB_NAME || "inventory").trim() || "inventory";
+const INVENTORY_DB_NAME = db.normalizeDatabaseName(AUTH_DB_NAME) || "inventory";
 
 function getAuthDbClient() {
   return new Client({
@@ -20,12 +22,20 @@ function getAuthDbClient() {
 }
 
 function buildAuthEmailFrom(setupRow = {}) {
-  const fromName = String(setupRow.from_name || "PULMO TECHNOLOGIES").trim() || "PULMO TECHNOLOGIES";
+  const fromName = String(setupRow.from_name || "AXIS PRODUCTION").trim() || "AXIS PRODUCTION";
   const fromEmail = String(setupRow.from_email || setupRow.smtp_user || "").trim();
   if (!fromEmail) {
-    return process.env.SMTP_FROM || '"PULMO TECHNOLOGIES" <noreply@company.com>';
+    return process.env.SMTP_FROM || '"AXIS PRODUCTION" <noreply@company.com>';
   }
   return `"${fromName}" <${fromEmail}>`;
+}
+
+function applyTemplate(template, data = {}) {
+  const raw = String(template || "");
+  return raw.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => {
+    const value = data[key];
+    return value === undefined || value === null ? "" : String(value);
+  });
 }
 
 function generateTemporaryPassword() {
@@ -33,6 +43,191 @@ function generateTemporaryPassword() {
   let out = "PT-";
   for (let i = 0; i < 8; i += 1) {
     out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+}
+
+function normalizeDbName(value) {
+  return db.normalizeDatabaseName(value || "");
+}
+
+function uniqueDatabaseNames(list = []) {
+  const seen = new Set();
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach((value) => {
+    const normalized = normalizeDbName(value);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    out.push(normalized);
+  });
+  return out;
+}
+
+async function resolveForgotPasswordDatabaseCandidates(client, userId) {
+  const dbs = [];
+
+  try {
+    const mappingsRs = await client.query(
+      `SELECT database_name
+       FROM user_mappings
+       WHERE user_id = $1
+       ORDER BY "updatedAt" DESC NULLS LAST, id DESC`,
+      [userId]
+    );
+    (mappingsRs.rows || []).forEach((row) => {
+      dbs.push(row?.database_name);
+    });
+  } catch (_err) {
+  }
+
+  try {
+    const accessRs = await client.query(
+      `SELECT database_name
+       FROM user_accesses
+       WHERE user_id = $1
+         AND database_name IS NOT NULL
+         AND TRIM(database_name) <> ''
+       ORDER BY "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC`,
+      [userId]
+    );
+    (accessRs.rows || []).forEach((row) => {
+      dbs.push(row?.database_name);
+    });
+  } catch (_err) {
+  }
+
+  dbs.push(INVENTORY_DB_NAME);
+  return uniqueDatabaseNames(dbs);
+}
+
+function toEmailSetupPlain(rowLike = {}) {
+  if (rowLike && typeof rowLike.toJSON === "function") {
+    return rowLike.toJSON();
+  }
+  return { ...(rowLike || {}) };
+}
+
+function scoreEmailSetup(setup = {}) {
+  let score = 0;
+  if (String(setup.smtp_host || "").trim()) score += 2;
+  if (String(setup.smtp_user || "").trim()) score += 2;
+  if (String(setup.smtp_pass || "").trim()) score += 4;
+  if (String(setup.from_email || "").trim()) score += 1;
+  if (String(setup.from_name || "").trim()) score += 1;
+  return score;
+}
+
+async function loadBestForgotPasswordEmailSetup(candidateDatabases = []) {
+  const setups = [];
+  const normalizedCandidates = uniqueDatabaseNames(candidateDatabases);
+
+  for (const databaseName of normalizedCandidates) {
+    try {
+      await db.registerDatabase(databaseName);
+      const row = await db.withDatabase(databaseName, async () => {
+        return EmailSetup.findOne({ order: [["id", "ASC"]] });
+      });
+      if (!row) continue;
+      const setup = toEmailSetupPlain(row);
+      setups.push({ database_name: databaseName, setup });
+    } catch (_err) {
+    }
+  }
+
+  if (!setups.length) {
+    return {
+      setup: {},
+      source_database_name: INVENTORY_DB_NAME,
+      candidate_setups: [],
+    };
+  }
+
+  setups.sort((a, b) => {
+    const scoreDiff = scoreEmailSetup(b.setup) - scoreEmailSetup(a.setup);
+    if (scoreDiff !== 0) return scoreDiff;
+    return normalizedCandidates.indexOf(a.database_name) - normalizedCandidates.indexOf(b.database_name);
+  });
+
+  return {
+    setup: setups[0].setup || {},
+    source_database_name: setups[0].database_name || INVENTORY_DB_NAME,
+    candidate_setups: setups,
+  };
+}
+
+function buildSmtpConfigFromSetup(setup = {}) {
+  return {
+    host: String(setup.smtp_host || "").trim() || undefined,
+    port: Number(setup.smtp_port || 0) || undefined,
+    secure: setup.smtp_secure === true,
+    user: String(setup.smtp_user || "").trim() || undefined,
+    pass: String(setup.smtp_pass || "").trim() || undefined,
+  };
+}
+
+function hasCompleteSmtpSetup(setup = {}) {
+  const host = String(setup.smtp_host || "").trim();
+  const user = String(setup.smtp_user || "").trim();
+  const pass = String(setup.smtp_pass || "").trim();
+  return !!host && !!user && !!pass;
+}
+
+function canRetryWithNextSetup(errorLike) {
+  const message = String(errorLike?.message || "").toLowerCase();
+  if (!message) return false;
+  return (
+    message.includes("smtp authentication failed") ||
+    message.includes("gmail smtp authentication failed") ||
+    message.includes("ssl/tls configuration failed")
+  );
+}
+
+function maskEmailValue(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  const at = raw.indexOf("@");
+  if (at <= 1) return raw || "(empty)";
+  const local = raw.slice(0, at);
+  const domain = raw.slice(at + 1);
+  const head = local.length <= 2 ? `${local[0]}*` : `${local.slice(0, 2)}***`;
+  return `${head}@${domain}`;
+}
+
+function smtpSetupLabel(setup = {}, databaseName = "") {
+  const host = String(setup.smtp_host || "").trim().toLowerCase() || "(empty)";
+  const port = Number(setup.smtp_port || 0) || 0;
+  const secure = setup.smtp_secure === true ? "ON" : "OFF";
+  const user = maskEmailValue(setup.smtp_user || "");
+  const passLength = String(setup.smtp_pass || "").trim().length;
+  return `db=${String(databaseName || "").trim().toLowerCase() || "(none)"} host=${host} port=${port} secure=${secure} user=${user} pass_len=${passLength}`;
+}
+
+function normalizeCompanyName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function buildPasswordResetSubject(companyNameRaw) {
+  const companyName = normalizeCompanyName(companyNameRaw) || "AXIS PRODUCTION";
+  return `Password Reset - ${companyName}`;
+}
+
+async function loadMappedCompanyNamesByDatabase(client, userId) {
+  const out = {};
+  try {
+    const rs = await client.query(
+      `SELECT um.database_name, cp.company_name
+       FROM user_mappings um
+       JOIN company_profiles cp ON cp.id = um.company_profile_id
+       WHERE um.user_id = $1
+       ORDER BY um."updatedAt" DESC NULLS LAST, um.id DESC`,
+      [userId]
+    );
+    for (const row of rs.rows || []) {
+      const dbName = normalizeDbName(row?.database_name || "");
+      const companyName = normalizeCompanyName(row?.company_name || "");
+      if (!dbName || !companyName || out[dbName]) continue;
+      out[dbName] = companyName;
+    }
+  } catch (_err) {
   }
   return out;
 }
@@ -86,6 +281,7 @@ exports.login = async (req, res) => {
        FROM user_mappings um
        JOIN company_profiles cp ON cp.id = um.company_profile_id
        WHERE um.user_id = $1
+       ORDER BY um."updatedAt" DESC NULLS LAST, um.id DESC
        LIMIT 1`,
       [user.id]
     );
@@ -233,35 +429,78 @@ exports.forgotPassword = async (req, res) => {
       );
     }
 
-    const setupRs = await client.query(
-      `SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, from_name, from_email
-       FROM email_setups
-       ORDER BY id ASC
-       LIMIT 1`
-    );
-    const setup = setupRs.rowCount ? setupRs.rows[0] : {};
+    const candidateDatabases = await resolveForgotPasswordDatabaseCandidates(client, user.id);
+    const resolvedSetup = await loadBestForgotPasswordEmailSetup(candidateDatabases);
+    const setup = resolvedSetup.setup || {};
 
-    const smtpConfig = {
-      host: String(setup.smtp_host || "").trim() || undefined,
-      port: Number(setup.smtp_port || 0) || undefined,
-      secure: setup.smtp_secure === true,
-      user: String(setup.smtp_user || "").trim() || undefined,
-      pass: String(setup.smtp_pass || "").trim() || undefined,
+    const mappedCompanyByDb = await loadMappedCompanyNamesByDatabase(client, user.id);
+
+    const templateData = {
+      user_name: String(user.username || "User"),
+      username: String(user.username || "User"),
+      customer_name: String(user.username || "User"),
+      email: String(user.email || ""),
+      password: String(plainPassword || ""),
+      invoice_no: String(plainPassword || ""),
+      total_amount: "",
+      invoice_date: new Date().toISOString().slice(0, 10),
     };
-    const subject = "Password Recovery - PULMO TECHNOLOGIES";
-    const textBody = generatedTemporary
-      ? `Dear ${user.username || "User"},\n\nYour email was matched successfully. A temporary password has been generated for your account.\n\nEmail: ${user.email}\nPassword: ${plainPassword}\n\nPlease login and update your password.\n\nPULMO TECHNOLOGIES`
-      : `Dear ${user.username || "User"},\n\nYour email was matched successfully.\n\nEmail: ${user.email}\nPassword: ${plainPassword}\n\nPULMO TECHNOLOGIES`;
+    const defaultBodyTemplate = generatedTemporary
+      ? "Dear {{user_name}},\n\nYour email was matched successfully. A temporary password has been generated for your account.\n\nEmail: {{email}}\nPassword: {{password}}\n\nPlease login and update your password.\n\nAXIS PRODUCTION"
+      : "Dear {{user_name}},\n\nYour email was matched successfully.\n\nEmail: {{email}}\nPassword: {{password}}\n\nAXIS PRODUCTION";
+    const bodyTemplate = String(setup.body_template || "").trim() || defaultBodyTemplate;
+    const textBody = applyTemplate(bodyTemplate, templateData) || applyTemplate(defaultBodyTemplate, templateData);
     const htmlBody = textBody.split("\n").map((line) => line.trim()).join("<br>");
 
-    await sendEmail({
-      to: String(user.email || "").trim(),
-      subject,
-      text: textBody,
-      html: htmlBody,
-      smtpConfig,
-      from: buildAuthEmailFrom(setup),
-    });
+    const allCandidateSetupsRaw = Array.isArray(resolvedSetup.candidate_setups) ? resolvedSetup.candidate_setups : [];
+    const allCandidateSetups = allCandidateSetupsRaw.filter((entry) => hasCompleteSmtpSetup(entry?.setup || {}));
+    if (!allCandidateSetups.length && !hasCompleteSmtpSetup(setup)) {
+      return res.status(400).json({
+        message: "Email setup is incomplete for this mapped company. Please configure SMTP Host, User and App Password in Support > Email Setup.",
+      });
+    }
+    const retryQueue = allCandidateSetups.length
+      ? allCandidateSetups
+      : [{ database_name: resolvedSetup.source_database_name || INVENTORY_DB_NAME, setup }];
+
+    let sendSucceeded = false;
+    let lastSendError = null;
+
+    for (let i = 0; i < retryQueue.length; i += 1) {
+      const currentSetup = retryQueue[i]?.setup || {};
+      const currentDbName = normalizeDbName(retryQueue[i]?.database_name || resolvedSetup.source_database_name || INVENTORY_DB_NAME);
+      const companyForSubject =
+        normalizeCompanyName(currentSetup.from_name || "") ||
+        normalizeCompanyName(mappedCompanyByDb[currentDbName] || "") ||
+        "AXIS PRODUCTION";
+      const subject = buildPasswordResetSubject(companyForSubject);
+      try {
+        await sendEmail({
+          to: String(user.email || "").trim(),
+          subject,
+          text: textBody,
+          html: htmlBody,
+          smtpConfig: buildSmtpConfigFromSetup(currentSetup),
+          from: buildAuthEmailFrom(currentSetup),
+        });
+        sendSucceeded = true;
+        break;
+      } catch (sendErr) {
+        lastSendError = sendErr;
+        const isLast = i === retryQueue.length - 1;
+        if (isLast || !canRetryWithNextSetup(sendErr)) {
+          break;
+        }
+      }
+    }
+
+    if (!sendSucceeded) {
+      if (lastSendError) {
+        const tried = retryQueue.map((entry) => smtpSetupLabel(entry?.setup || {}, entry?.database_name || "")).join(" | ");
+        throw new Error(`${lastSendError.message} Tried: ${tried}`);
+      }
+      throw new Error("Failed to send password email.");
+    }
 
     return res.json({
       message: generatedTemporary

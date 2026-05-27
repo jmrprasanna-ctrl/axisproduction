@@ -1,0 +1,163 @@
+.main-content .page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.main-content .page-head h2 {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.main-content .page-head .icon-btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.form-container {
+  overflow-x: visible;
+}
+
+.invoice-meta-panel {
+  margin-bottom: 14px;
+}
+
+.invoice-meta-grid {
+  display: block;
+  margin: 10px 0;
+}
+
+#invoiceTitle {
+  font-size: 15px;
+}
+
+.form-toolbar {
+  display: block;
+}
+
+.invoice-meta-grid .field,
+.form-toolbar .field { width: 100%; }
+
+#paymentDate {
+  width: 100%;
+  max-width: 100%;
+}
+
+.proof-toolbar {
+  margin-top: 10px;
+}
+
+.camera-btn {
+  color: #0f6abf;
+}
+
+.file-name {
+  font-size: 13px;
+  color: #4d6376;
+}
+
+.proof-meta {
+  margin-top: 4px;
+}
+
+.file-meta {
+  font-size: 13px;
+  color: #5f7285;
+}
+
+.proof-preview {
+  margin-top: 10px;
+}
+
+#paymentProofPreview {
+  width: 180px;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d5e2ef;
+}
+
+.save-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.danger-btn {
+  color: #b3261e;
+  border-color: #f0c9c4;
+  background: #fff7f6;
+}
+
+.danger-btn:hover {
+  color: #8f1e18;
+  border-color: #e6aaa2;
+  background: #ffefed;
+}
+
+.email-btn {
+  color: #0f6abf;
+  border-color: #c6def6;
+  background: #f1f7ff;
+}
+
+.email-btn:hover {
+  color: #0c4f8f;
+  border-color: #9cc6ec;
+  background: #e8f2ff;
+}
+
+.items-section {
+  margin-top: 18px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#supTechPayItemsTable {
+  min-width: 860px;
+}
+
+#supTechPayItemsTable td,
+#supTechPayItemsTable th {
+  vertical-align: middle;
+}
+
+@media (max-width: 900px) {
+  .main-content .page-head {
+    gap: 10px;
+  }
+
+  .proof-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .file-name {
+    width: 100%;
+    line-height: 1.35;
+  }
+
+  .save-row {
+    flex-wrap: wrap;
+  }
+
+  #supTechPayItemsTable {
+    min-width: 760px;
+  }
+}
+
+@media (min-width: 901px) {
+  #paymentDate {
+    width: 260px;
+  }
+}

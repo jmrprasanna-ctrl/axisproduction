@@ -94,18 +94,18 @@ const POS = {
 };
 const ADDRESS_TEXTS = {
     colombo: [
-        "PULMO TECHNOLOGIES",
+        "AXIS PRODUCTION",
         "No 528/48, 2nd Maradana, Colombo 10.",
         "TEL : 0770 3000 80",
-        "pulmotechnologies@gmail.com",
-        "www.pulmotech.lk"
+        "info@axisproduction.com",
+        "www.axisproduction.com"
     ],
     v: [
-        "PULMO TECHNOLOGIES",
+        "AXIS PRODUCTION",
         "No 30/1, Muddaragama, Veyangoda.",
         "TEL : 0770 3000 80",
-        "pulmotechnologies@gmail.com",
-        "www.pulmotech.lk"
+        "info@axisproduction.com",
+        "www.axisproduction.com"
     ]
 };
 let selectedAddressKey = "v";

@@ -1,13 +1,33 @@
-﻿                                  
+                                  
 const storedRole = localStorage.getItem("role") || "";
 const storedEmail = localStorage.getItem("userEmail") || "";
 const storedName = localStorage.getItem("userName") || "";
 const storedProfileName = localStorage.getItem("profileName") || "";
-let displayName = storedProfileName || storedName || storedEmail || storedRole || "User";
+function resolveDashboardDisplayName(profileName, userName, userEmail, userRole){
+    const candidates = [
+        String(profileName || "").trim(),
+        String(userName || "").trim(),
+        String(userEmail || "").trim(),
+        String(userRole || "").trim(),
+    ];
+    for(const candidate of candidates){
+        if(candidate.length >= 2){
+            return candidate;
+        }
+    }
+    return "User";
+}
+
+function formatWelcomeNameForMobile(name){
+    const clean = String(name || "").replace(/\s+/g, " ").trim();
+    return clean || "User";
+}
+
+let displayName = resolveDashboardDisplayName(storedProfileName, storedName, storedEmail, storedRole);
 const accountName = storedName || storedEmail || storedRole || "User";
 
 const roleEl = document.getElementById("userRole");
-if (roleEl) roleEl.innerText = displayName || "User";
+if (roleEl) roleEl.innerText = formatWelcomeNameForMobile(displayName || "User");
 
 const nameEl = document.getElementById("userName");
 if (nameEl) nameEl.innerText = accountName;
@@ -19,23 +39,86 @@ if (initialEl) {
 }
 
 function applyDashboardIdentity(name){
-    const safeName = String(name || "").trim() || displayName || "User";
+    const incoming = String(name || "").trim();
+    const safeName = incoming.length >= 2
+        ? incoming
+        : resolveDashboardDisplayName("", storedName, storedEmail, storedRole);
     displayName = safeName;
     const welcomeEl = document.getElementById("userRole");
-    if(welcomeEl) welcomeEl.innerText = safeName;
+    if(welcomeEl) welcomeEl.innerText = formatWelcomeNameForMobile(safeName);
 }
 
 async function loadDashboardProfileName(){
-    const userId = Number(localStorage.getItem("userId") || 0);
-    if(!Number.isFinite(userId) || userId <= 0) return;
-    try{
-        const profile = await request(`/users/profiles/${userId}`,"GET");
-        const profileName = String(profile?.profile_name || "").trim();
-        if(profileName){
-            localStorage.setItem("profileName", profileName);
-            applyDashboardIdentity(profileName);
+    const doesProfileMatchCurrentAccount = (profile) => {
+        const rowLoginUser = String(profile?.login_user || "").trim().toLowerCase();
+        const rowEmail = String(profile?.email || "").trim().toLowerCase();
+        const hasStoredName = normalizedStoredName.length > 0;
+        const hasStoredEmail = normalizedStoredEmail.length > 0;
+        if(hasStoredName && rowLoginUser && rowLoginUser === normalizedStoredName){
+            return true;
         }
+        if(hasStoredEmail && rowEmail && rowEmail === normalizedStoredEmail){
+            return true;
+        }
+        if(!hasStoredName && !hasStoredEmail){
+            return true;
+        }
+        return false;
+    };
+
+    const pickProfileDisplayName = (profile) => {
+        const profileName = String(profile?.profile_name || "").trim();
+        const loginUser = String(profile?.login_user || "").trim();
+        const email = String(profile?.email || "").trim();
+        return resolveDashboardDisplayName(profileName, loginUser, email, storedRole);
+    };
+
+    const userId = Number(localStorage.getItem("userId") || 0);
+    const normalizedStoredName = String(storedName || "").trim().toLowerCase();
+    const normalizedStoredEmail = String(storedEmail || "").trim().toLowerCase();
+    try{
+        if(Number.isFinite(userId) && userId > 0){
+            const profile = await request(`/users/profiles/${userId}`,"GET");
+            const profileName = pickProfileDisplayName(profile);
+            if(profileName.length >= 2 && doesProfileMatchCurrentAccount(profile)){
+                localStorage.setItem("profileName", profileName);
+                applyDashboardIdentity(profileName);
+                return;
+            }
+        }
+
+        const profiles = await request("/users/profiles","GET");
+        const rows = Array.isArray(profiles) ? profiles : [];
+        const matched = rows.find((row) => {
+            const rowLoginUser = String(row?.login_user || "").trim().toLowerCase();
+            const rowEmail = String(row?.email || "").trim().toLowerCase();
+            if(normalizedStoredName && rowLoginUser && rowLoginUser === normalizedStoredName){
+                return true;
+            }
+            if(normalizedStoredEmail && rowEmail && rowEmail === normalizedStoredEmail){
+                return true;
+            }
+            const rowUserId = Number(row?.user_id || 0);
+            if((!normalizedStoredName && !normalizedStoredEmail) && Number.isFinite(userId) && userId > 0 && rowUserId === userId){
+                return true;
+            }
+            return false;
+        });
+
+        if(matched){
+            const fallbackName = pickProfileDisplayName(matched);
+            if(fallbackName.length >= 2 && doesProfileMatchCurrentAccount(matched)){
+                localStorage.setItem("profileName", fallbackName);
+                applyDashboardIdentity(fallbackName);
+                return;
+            }
+        }
+
+        localStorage.removeItem("profileName");
+        applyDashboardIdentity(resolveDashboardDisplayName("", storedName, storedEmail, storedRole));
     }catch(_err){
+        localStorage.removeItem("profileName");
+        applyDashboardIdentity(resolveDashboardDisplayName("", storedName, storedEmail, storedRole));
     }
 }
 
@@ -93,7 +176,6 @@ function bindDashboardTileAccessLinks(){
         { id: "totalMchine", permissionPath: "/dashboard/tiles/total-machines", paths: ["/products/general-machine.html"] },
         { id: "totalRentalMachines", permissionPath: "/dashboard/tiles/total-rental-machines", paths: ["/products/machine.html"] },
         { id: "totalCustomers", permissionPath: "/dashboard/tiles/total-customers", paths: ["/customers/customer-list.html"] },
-        { id: "totalVendors", permissionPath: "/dashboard/tiles/total-vendors", paths: ["/vendors/list-vendor.html"] },
         { id: "totalProducts", permissionPath: "/dashboard/tiles/total-products", paths: ["/products/product-list.html"] },
         { id: "totalSales", permissionPath: "/dashboard/tiles/total-sales", paths: ["/reports/sales-report.html", "/invoices/invoice-list.html"] },
         { id: "receivedPayment", permissionPath: "/dashboard/tiles/received-payment", paths: ["/finance/payments.html", "/finance/finance.html"] },
@@ -224,13 +306,7 @@ const DASHBOARD_MENU_ENTRIES = [
         label: "Machines",
         children: [
             { path: "/products/general-machine.html", label: "General" },
-            {
-                path: "/products/machine.html",
-                label: "Rental",
-                children: [
-                    { path: "/products/machine.html", label: "Rental Mchine" }
-                ]
-            }
+            { path: "/products/machine.html", label: "Rental" }
         ]
     },
     {
@@ -252,19 +328,33 @@ const DASHBOARD_MENU_ENTRIES = [
             { path: "/finance/finance.html", label: "Finance" },
             { path: "/finance/payments.html", label: "Payments" },
             { path: "/finance/pendings.html", label: "Pendings" },
+            { path: "/finance/sup-tech-pay.html", label: "Sup.Tech Pay" },
             { path: "/support/warrenty.html", label: "Warrenty" }
         ]
     },
     { path: "/support/support.html", label: "Support" },
     { path: "/stock/stock.html", label: "Stock" },
     {
+        path: "/hr/inout.html",
+        label: "HR",
+        children: [
+            { path: "/hr/inout.html", label: "INOUT" },
+            { path: "/hr/time-sheet.html", label: "Time Sheet" },
+            { path: "/hr/sallary.html", label: "Sallary" },
+            { path: "/hr/leave.html", label: "Leave" },
+            { path: "/hr/payslip.html", label: "Payslip" }
+        ]
+    },
+    {
         path: "/users/user-list.html",
         label: "System",
         children: [
             { path: "/users/user-list.html", label: "User List" },
             { path: "/users/profile-list.html", label: "Profile" },
-            { path: "/users/preference.html", label: "Preference" },
+            { path: "/users/preference.html", label: "System Preference" },
+            { path: "/users/user-logged.html", label: "Logged" },
             { path: "/users/user-access.html", label: "Access" },
+            { path: "/users/backup.html", label: "Backup" },
             {
                 path: "/users/mapped.html",
                 label: "Mapped",
@@ -275,7 +365,6 @@ const DASHBOARD_MENU_ENTRIES = [
                     { path: "/users/inv-map.html", label: "Inv Map" }
                 ]
             },
-            { path: "/users/user-logged.html", label: "Logged" },
             { path: "/support/email-setup.html", label: "Email" }
         ]
     }
@@ -466,7 +555,7 @@ function initDashboardUserMenu(){
             : "users/profile-list.html";
     }
     if(preferenceLink){
-        preferenceLink.href = "users/preference.html";
+        preferenceLink.href = "users/user-preference.html";
     }
 
     const syncUserMenuAccess = () => {
@@ -475,7 +564,7 @@ function initDashboardUserMenu(){
             profileLink.style.display = allowProfile ? "" : "none";
         }
         if(preferenceLink){
-            const allowPreference = hasDashboardAccessFor("/users/preference.html", ["view", "edit"]);
+            const allowPreference = hasDashboardAccessFor("/users/user-preference.html", ["view", "edit"]);
             preferenceLink.style.display = allowPreference ? "" : "none";
         }
     };
@@ -582,10 +671,15 @@ async function fetchSummary(){
         if(rentalMachinesEl){
             rentalMachinesEl.querySelector("p").innerText = summary.totalRentalMachines || 0;
         }
-        document.getElementById("totalProducts").querySelector("p").innerText = summary.totalProducts || 0;
-        document.getElementById("totalCustomers").querySelector("p").innerText = summary.totalCustomers || 0;
-        document.getElementById("totalVendors").querySelector("p").innerText = summary.totalVendors || 0;
-                                            
+        const totalCustomersEl = document.getElementById("totalCustomers");
+        if(totalCustomersEl){
+            totalCustomersEl.querySelector("p").innerText = summary.totalCustomers || 0;
+        }
+        const totalProductsEl = document.getElementById("totalProducts");
+        if(totalProductsEl){
+            totalProductsEl.querySelector("p").innerText = summary.totalProducts || 0;
+        }
+                                             
         const salesVal = summary.totalSalesPeriod ?? summary.totalSales ?? 0;
         const receivedPaymentVal = summary.receivedPaymentPeriod ?? summary.receivedPayment ?? 0;
         const rentalMachinesCountsVal = summary.rentalMachinesCountsPricePeriod
@@ -669,10 +763,10 @@ async function fetchSummary(){
             profitChartInstance.destroy();
         }
         profitChartInstance = new Chart(profitCtx,{
-            type:"line",
+            type:"bar",
             data:{
                 labels,
-                datasets:[{label:"Profit",data:monthlyProfit,borderColor:"#2980b9",fill:false}]
+                datasets:[{label:"Net Profit",data:monthlyProfit,backgroundColor:"#9ad9a6",borderColor:"#6fbd84",borderWidth:1}]
             }
         });
 

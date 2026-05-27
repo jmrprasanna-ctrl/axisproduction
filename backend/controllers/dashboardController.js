@@ -9,7 +9,10 @@ const InvoiceItem = require("../models/InvoiceItem");
 const Expense = require("../models/Expense");
 const RentalMachineCount = require("../models/RentalMachineCount");
 const RentalMachineConsumable = require("../models/RentalMachineConsumable");
+const { queueDailyDatabaseBackup } = require("./systemBackupController");
 const { Op, fn, col, where: sqWhere } = require("sequelize");
+
+const MONTH_NAMES_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function sumTechnicianPaid(rows){
     return (Array.isArray(rows) ? rows : []).reduce((sum, inv) => {
@@ -102,17 +105,289 @@ function buildDateOnlyRangeWhere(columnName, startDate, endDate){
     );
 }
 
+function toNumberSafe(value){
+    const n = Number(value || 0);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function getErrorCode(err){
+    return String(
+        err?.original?.code
+        || err?.parent?.code
+        || err?.code
+        || ""
+    ).trim();
+}
+
+function getErrorMessage(err){
+    return String(
+        err?.original?.message
+        || err?.parent?.message
+        || err?.message
+        || ""
+    ).trim();
+}
+
+function isSchemaCompatibilityError(err){
+    const code = getErrorCode(err);
+    if(code === "42P01" || code === "42703" || code === "42704" || code === "42883"){
+        return true;
+    }
+    const msg = getErrorMessage(err).toLowerCase();
+    return msg.includes("does not exist")
+        || msg.includes("undefined table")
+        || msg.includes("undefined column")
+        || msg.includes("undefined function");
+}
+
+function buildEmptySummaryPayload(period, periodStart, periodEnd, baseDate){
+    const year = Number(baseDate?.getFullYear?.() || new Date().getFullYear());
+    const months = MONTH_NAMES_SHORT.slice();
+    const monthlySales = new Array(12).fill(0);
+    const monthlyProfit = new Array(12).fill(0);
+    return {
+        totalUsers: 0,
+        totalGeneralMachines: 0,
+        totalRentalMachines: 0,
+        totalProducts: 0,
+        totalCustomers: 0,
+        totalVendors: 0,
+        totalSales: 0,
+        receivedPayment: 0,
+        rentalMachinesCountsPrice: 0,
+        rentalConsumablesPrice: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        technicianPaid: 0,
+        technicianPaidForProfit: 0,
+        vendorPaid: 0,
+        totalSalesAllTime: 0,
+        receivedPaymentAllTime: 0,
+        rentalMachinesCountsPriceAllTime: 0,
+        rentalMachinesCountsPriceAllInputs: 0,
+        rentalConsumablesPriceAllTime: 0,
+        rentalConsumablesPriceAllInputs: 0,
+        totalExpensesAllTime: 0,
+        netProfitAllTime: 0,
+        technicianPaidAllTime: 0,
+        technicianPaidAllTimeForProfit: 0,
+        vendorPaidAllTime: 0,
+        totalSalesPeriod: 0,
+        receivedPaymentPeriod: 0,
+        rentalMachinesCountsPricePeriod: 0,
+        rentalConsumablesPricePeriod: 0,
+        totalExpensesPeriod: 0,
+        netProfitPeriod: 0,
+        technicianPaidPeriod: 0,
+        technicianPaidForProfitPeriod: 0,
+        vendorPaidPeriod: 0,
+        lowStock: [],
+        months,
+        monthlySales,
+        monthlyProfit,
+        period,
+        periodStart,
+        periodEnd,
+        year,
+        fallback_mode: "schema_compatibility"
+    };
+}
+
+async function buildSchemaCompatibleSummary(period, periodStart, periodEnd, baseDate){
+    const periodStartDate = toDateOnlyText(periodStart) || new Date(periodStart).toISOString().slice(0, 10);
+    const periodEndDate = toDateOnlyText(periodEnd) || new Date(periodEnd).toISOString().slice(0, 10);
+    const year = Number(baseDate?.getFullYear?.() || new Date().getFullYear());
+
+    const safe = async (fn, fallbackValue) => {
+        try{
+            const value = await fn();
+            if(value === null || value === undefined){
+                return fallbackValue;
+            }
+            return value;
+        }catch(err){
+            if(isSchemaCompatibilityError(err)){
+                return fallbackValue;
+            }
+            throw err;
+        }
+    };
+
+    const totalUsers = toNumberSafe(await safe(() => User.count(), 0));
+    const totalGeneralMachines = toNumberSafe(await safe(() => GeneralMachine.count(), 0));
+    const totalRentalMachines = toNumberSafe(await safe(() => RentalMachine.count(), 0));
+    const totalProducts = toNumberSafe(await safe(() => Product.count(), 0));
+    const totalCustomers = toNumberSafe(await safe(() => Customer.count(), 0));
+    const totalVendors = toNumberSafe(await safe(() => Vendor.count(), 0));
+
+    const invoiceDateRangeWhere = buildDateOnlyRangeWhere("invoice_date", periodStartDate, periodEndDate);
+    const invoiceCreatedRangeWhere = { createdAt: { [Op.between]: [periodStart, periodEnd] } };
+    const expenseDateRangeWhere = buildDateOnlyRangeWhere("date", periodStartDate, periodEndDate);
+    const expenseCreatedRangeWhere = { createdAt: { [Op.between]: [periodStart, periodEnd] } };
+
+    let totalSalesPeriod = await safe(() => Invoice.sum("total_amount", { where: invoiceDateRangeWhere }), null);
+    if(totalSalesPeriod === null){
+        totalSalesPeriod = await safe(() => Invoice.sum("total_amount", { where: invoiceCreatedRangeWhere }), 0);
+    }
+
+    let totalExpensesPeriod = await safe(() => Expense.sum("amount", { where: expenseDateRangeWhere }), null);
+    if(totalExpensesPeriod === null){
+        totalExpensesPeriod = await safe(() => Expense.sum("amount", { where: expenseCreatedRangeWhere }), 0);
+    }
+
+    let receivedPaymentPeriod = await safe(() => Invoice.sum("total_amount", {
+        where: {
+            [Op.and]: [
+                invoiceDateRangeWhere,
+                { payment_status: getReceivedPaymentStatusFilter() }
+            ]
+        }
+    }), null);
+    if(receivedPaymentPeriod === null){
+        receivedPaymentPeriod = await safe(() => Invoice.sum("total_amount", {
+            where: {
+                [Op.and]: [
+                    invoiceCreatedRangeWhere,
+                    { payment_status: getReceivedPaymentStatusFilter() }
+                ]
+            }
+        }), 0);
+    }
+
+    const totalSalesAllTime = toNumberSafe(await safe(() => Invoice.sum("total_amount"), 0));
+    const totalExpensesAllTime = toNumberSafe(await safe(() => Expense.sum("amount"), 0));
+    const receivedPaymentAllTime = toNumberSafe(await safe(() => Invoice.sum("total_amount", {
+        where: {
+            payment_status: getReceivedPaymentStatusFilter()
+        }
+    }), 0));
+
+    const lowStock = await safe(() => Product.findAll({
+        where:{ count:{ [Op.lt]:5 } },
+        attributes:["product_id","description","count"]
+    }), []);
+
+    const months = MONTH_NAMES_SHORT.slice();
+    const monthlySales = [];
+    const monthlyProfit = [];
+    for(let m = 0; m < 12; m += 1){
+        const start = new Date(year, m, 1, 0, 0, 0, 0);
+        const end = new Date(year, m + 1, 0, 23, 59, 59, 999);
+        const startText = toDateOnlyText(start);
+        const endText = toDateOnlyText(end);
+        const monthDateWhere = buildDateOnlyRangeWhere("invoice_date", startText, endText);
+        const monthCreatedWhere = { createdAt: { [Op.between]: [start, end] } };
+
+        let monthSales = await safe(() => Invoice.sum("total_amount", { where: monthDateWhere }), null);
+        if(monthSales === null){
+            monthSales = await safe(() => Invoice.sum("total_amount", { where: monthCreatedWhere }), 0);
+        }
+        let monthReceivedPayment = await safe(() => Invoice.sum("total_amount", {
+            where: {
+                [Op.and]: [
+                    monthDateWhere,
+                    { payment_status: getReceivedPaymentStatusFilter() }
+                ]
+            }
+        }), null);
+        if(monthReceivedPayment === null){
+            monthReceivedPayment = await safe(() => Invoice.sum("total_amount", {
+                where: {
+                    [Op.and]: [
+                        monthCreatedWhere,
+                        { payment_status: getReceivedPaymentStatusFilter() }
+                    ]
+                }
+            }), 0);
+        }
+
+        let monthExpenses = await safe(() => Expense.sum("amount", {
+            where: buildDateOnlyRangeWhere("date", startText, endText)
+        }), null);
+        if(monthExpenses === null){
+            monthExpenses = await safe(() => Expense.sum("amount", { where: monthCreatedWhere }), 0);
+        }
+
+        monthlySales.push(toNumberSafe(monthSales));
+        monthlyProfit.push(toNumberSafe(monthReceivedPayment) - toNumberSafe(monthExpenses));
+    }
+
+    const totalSalesPeriodSafe = toNumberSafe(totalSalesPeriod);
+    const totalExpensesPeriodSafe = toNumberSafe(totalExpensesPeriod);
+    const receivedPaymentPeriodSafe = toNumberSafe(receivedPaymentPeriod);
+    const netProfitPeriod = receivedPaymentPeriodSafe - totalExpensesPeriodSafe;
+    const netProfitAllTime = receivedPaymentAllTime - totalExpensesAllTime;
+
+    return {
+        totalUsers,
+        totalGeneralMachines,
+        totalRentalMachines,
+        totalProducts,
+        totalCustomers,
+        totalVendors,
+        totalSales: totalSalesPeriodSafe,
+        receivedPayment: receivedPaymentPeriodSafe,
+        rentalMachinesCountsPrice: 0,
+        rentalConsumablesPrice: 0,
+        totalExpenses: totalExpensesPeriodSafe,
+        netProfit: netProfitPeriod,
+        technicianPaid: 0,
+        technicianPaidForProfit: 0,
+        vendorPaid: 0,
+        totalSalesAllTime,
+        receivedPaymentAllTime,
+        rentalMachinesCountsPriceAllTime: 0,
+        rentalMachinesCountsPriceAllInputs: 0,
+        rentalConsumablesPriceAllTime: 0,
+        rentalConsumablesPriceAllInputs: 0,
+        totalExpensesAllTime,
+        netProfitAllTime,
+        technicianPaidAllTime: 0,
+        technicianPaidAllTimeForProfit: 0,
+        vendorPaidAllTime: 0,
+        totalSalesPeriod: totalSalesPeriodSafe,
+        receivedPaymentPeriod: receivedPaymentPeriodSafe,
+        rentalMachinesCountsPricePeriod: 0,
+        rentalConsumablesPricePeriod: 0,
+        totalExpensesPeriod: totalExpensesPeriodSafe,
+        netProfitPeriod,
+        technicianPaidPeriod: 0,
+        technicianPaidForProfitPeriod: 0,
+        vendorPaidPeriod: 0,
+        lowStock: Array.isArray(lowStock) ? lowStock : [],
+        months,
+        monthlySales,
+        monthlyProfit,
+        period,
+        periodStart,
+        periodEnd,
+        year,
+        fallback_mode: "schema_compatibility_partial"
+    };
+}
+
 exports.getSummary = async (req,res)=>{
+    let period = "day";
+    let baseDate = new Date();
+    let periodStart = new Date(baseDate);
+    let periodEnd = new Date(baseDate);
     try{
-        const period = String(req.query.period || "day").toLowerCase();
+        period = String(req.query.period || "day").toLowerCase();
         const dateStr = req.query.date;
-        const baseDate = parseBaseDateInput(dateStr);
+        baseDate = parseBaseDateInput(dateStr);
         if(isNaN(baseDate.getTime())){
             return res.status(400).json({ message: "Invalid date" });
         }
 
-        let periodStart = new Date(baseDate);
-        let periodEnd = new Date(baseDate);
+        periodStart = new Date(baseDate);
+        periodEnd = new Date(baseDate);
+
+        const requestedDbName = String(
+            req.databaseName || req.user?.database_name || req.headers["x-database-name"] || process.env.DB_NAME || "inventory"
+        ).trim().toLowerCase() || "inventory";
+        queueDailyDatabaseBackup(requestedDbName).catch((backupErr) => {
+            console.error("[dashboard] Daily database backup warning:", backupErr?.message || backupErr);
+        });
 
         if(period === "week"){
             const day = periodStart.getDay();         
@@ -323,35 +598,102 @@ exports.getSummary = async (req,res)=>{
         const currentYear = baseDate.getFullYear();
 
         for(let m=0;m<12;m++){
-            const start = new Date(currentYear,m,1);
-            const end = new Date(currentYear,m+1,0);
+            const start = new Date(currentYear,m,1,0,0,0,0);
+            const end = new Date(currentYear,m+1,0,23,59,59,999);
             const startText = toDateOnlyText(start);
             const endText = toDateOnlyText(end);
+            const monthInvoiceDateWhere = buildDateOnlyRangeWhere("invoice_date", startText, endText);
 
-            const salesInvoices = await Invoice.findAll({
-                where: buildDateOnlyRangeWhere("invoice_date", startText, endText),
-                include:[{
-                    model: InvoiceItem,
-                    required: false,
-                    include: [{ model: Product, required: false, attributes: ["dealer_price"] }]
-                }]
+            const monthSales = await Invoice.sum("total_amount",{
+                where: monthInvoiceDateWhere
+            }) || 0;
+            const monthExpenses = await Expense.sum("amount",{
+                where: buildDateOnlyRangeWhere("date", startText, endText)
+            }) || 0;
+            const monthReceivedPayment = await Invoice.sum("total_amount",{
+                include: [getGeneralCustomerInclude()],
+                where:{
+                    [Op.and]: [
+                        monthInvoiceDateWhere,
+                        { payment_status: getReceivedPaymentStatusFilter() }
+                    ]
+                }
+            }) || 0;
+            const monthInvoicesForTechnician = await Invoice.findAll({
+                where:{
+                    [Op.and]: [
+                        monthInvoiceDateWhere,
+                        { support_technician: { [Op.not]: null } }
+                    ]
+                },
+                attributes:["id","total_amount","support_technician","support_technician_percentage"],
+                include: [
+                    {
+                        model: InvoiceItem,
+                        required: false,
+                        attributes: ["qty"],
+                        include: [{ model: Product, required: false, attributes: ["dealer_price"] }]
+                    }
+                ]
             });
+            const monthTechnicianPaid = sumTechnicianPaid(monthInvoicesForTechnician);
+            const monthInvoiceItemsForVendor = await InvoiceItem.findAll({
+                include: [
+                    {
+                        model: Invoice,
+                        required: true,
+                        attributes: ["id", "invoice_date", "payment_status"],
+                        where: {
+                            [Op.and]: [
+                                monthInvoiceDateWhere,
+                                { payment_status: getReceivedPaymentStatusFilter() }
+                            ]
+                        },
+                        include: [getGeneralCustomerInclude()]
+                    },
+                    { model: Product, required: false, attributes: ["id", "dealer_price"] }
+                ],
+                attributes: ["qty"]
+            });
+            const monthVendorPaid = sumVendorPaidFromInvoiceItems(monthInvoiceItemsForVendor);
+            const monthRentalCountsRows = await RentalMachineCount.findAll({
+                where: {
+                    [Op.or]: [
+                        { entry_date: { [Op.between]: [startText, endText] } },
+                        {
+                            entry_date: { [Op.is]: null },
+                            createdAt: { [Op.between]: [start, end] }
+                        }
+                    ]
+                },
+                attributes: ["input_count", "updated_count"]
+            });
+            const monthRentalMachinesCountsPrice = sumRentalCountPrice(monthRentalCountsRows);
+            const monthRentalConsumablesRows = await RentalMachineConsumable.findAll({
+                where: {
+                    [Op.or]: [
+                        { entry_date: { [Op.between]: [startText, endText] } },
+                        {
+                            entry_date: { [Op.is]: null },
+                            createdAt: { [Op.between]: [start, end] }
+                        }
+                    ]
+                },
+                include: [{ model: Product, required: false, attributes: ["id", "dealer_price"] }],
+                attributes: ["quantity"]
+            });
+            const monthRentalConsumablesPrice = sumRentalConsumablesPrice(monthRentalConsumablesRows);
 
-            let monthSales = 0;
-            let monthProfit = 0;
-            salesInvoices.forEach(inv=>{
-                monthSales += inv.total_amount;
-                const technician = String(inv.support_technician || "").trim();
-                const rawPct = Number(inv.support_technician_percentage || 0);
-                const pct = Number.isFinite(rawPct) ? Math.min(Math.max(rawPct, 0), 100) : 0;
-                const vendorProductValue = sumVendorPaidFromInvoiceItems(inv.InvoiceItems || []);
-                const balanceForTechnician = Math.max(Number(inv.total_amount || 0) - vendorProductValue, 0);
-                const technicianPaid = technician ? (balanceForTechnician * pct) / 100 : 0;
-                monthProfit += inv.total_amount - inv.InvoiceItems.reduce((a,b)=>a+b.gross,0) - technicianPaid;
-            });
+            const monthProfit =
+                toNumberSafe(monthReceivedPayment)
+                + toNumberSafe(monthRentalMachinesCountsPrice)
+                - toNumberSafe(monthRentalConsumablesPrice)
+                - toNumberSafe(monthExpenses)
+                - toNumberSafe(monthTechnicianPaid)
+                - toNumberSafe(monthVendorPaid);
             months.push(start.toLocaleString('default',{month:'short'}));
-            monthlySales.push(monthSales);
-            monthlyProfit.push(monthProfit);
+            monthlySales.push(toNumberSafe(monthSales));
+            monthlyProfit.push(Number(monthProfit.toFixed(2)));
         }
 
         res.json({
@@ -400,6 +742,21 @@ exports.getSummary = async (req,res)=>{
         });
 
     }catch(err){
+        if(isSchemaCompatibilityError(err)){
+            const message = getErrorMessage(err);
+            console.warn("[dashboard] Schema compatibility fallback used for summary.", {
+                database: String(req?.databaseName || req?.user?.database_name || ""),
+                code: getErrorCode(err),
+                message
+            });
+            try{
+                const compatibleSummary = await buildSchemaCompatibleSummary(period, periodStart, periodEnd, baseDate);
+                return res.json(compatibleSummary);
+            }catch(compatErr){
+                console.error("[dashboard] Compatible summary fallback failed.", compatErr);
+                return res.json(buildEmptySummaryPayload(period, periodStart, periodEnd, baseDate));
+            }
+        }
         console.error(err);
         res.status(500).json({ message:"Failed to get dashboard summary" });
     }

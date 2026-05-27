@@ -22,6 +22,40 @@ const USER_PROFILE_STORAGE_ROOT = path.resolve(__dirname, "../storage/user-profi
 const PROFILE_IMAGE_ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".bmp", ".gif", ".png", ".tif", ".tiff", ".webp"]);
 
 let userProfileSchemaEnsured = false;
+const ALLOWED_USER_DEPARTMENTS = ["Manager", "IT", "Finance", "Admin", "Cordinater", "Technician"];
+const ALLOWED_USER_DEPARTMENT_SET = new Set(ALLOWED_USER_DEPARTMENTS);
+const USER_DIRECTORY_DB = db.normalizeDatabaseName(process.env.DB_NAME || "inventory") || "inventory";
+const DEPARTMENT_ACCESS_TEMPLATE_TOKENS = {
+  Manager: ["pulmo"],
+  Finance: ["nishani"],
+  Cordinater: ["cordinater", "coordinator", "coordinater", "cordinator"],
+  IT: ["rajitha"],
+};
+
+function normalizeDepartmentToken(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z]+/g, "");
+}
+
+function normalizeUserDepartment(value) {
+  const token = normalizeDepartmentToken(value);
+  if (!token) return "";
+
+  if (token === "manager") return "Manager";
+  if (token === "it" || token === "informationtechnology" || token === "informationtech") return "IT";
+  if (token === "finance" || token === "finances" || token === "accounts" || token === "accounting") return "Finance";
+  if (token === "admin" || token === "administrator") return "Admin";
+  if (token === "cordinater" || token === "coordinator" || token === "coordinater" || token === "cordinator") return "Cordinater";
+  if (token === "technician" || token === "tech") return "Technician";
+
+  return "";
+}
+
+function runUserDirectoryDb(task) {
+  return db.withDatabase(USER_DIRECTORY_DB, task);
+}
 
 function normalizeDatabaseName(value) {
   const normalized = db.normalizeDatabaseName(value);
@@ -30,6 +64,100 @@ function normalizeDatabaseName(value) {
 
 function getRequestDatabaseName(req) {
   return normalizeDatabaseName(req?.databaseName || req?.user?.database_name || req?.headers?.["x-database-name"]);
+}
+
+async function findDepartmentTemplateUser(department, transaction) {
+  const tokenCandidates = Array.isArray(DEPARTMENT_ACCESS_TEMPLATE_TOKENS[department])
+    ? DEPARTMENT_ACCESS_TEMPLATE_TOKENS[department]
+    : [];
+
+  for (const token of tokenCandidates) {
+    const tokenLike = `%${String(token || "").trim().toLowerCase()}%`;
+    if (!tokenLike || tokenLike === "%%") continue;
+    const templateResult = await db.query(
+      `SELECT id, username, department
+       FROM users
+       WHERE LOWER(COALESCE(username, '')) LIKE $1
+       ORDER BY CASE WHEN LOWER(COALESCE(department, '')) = $2 THEN 0 ELSE 1 END, id ASC
+       LIMIT 1`,
+      {
+        bind: [tokenLike, String(department || "").toLowerCase()],
+        transaction,
+      }
+    );
+    const rows = Array.isArray(templateResult?.[0]) ? templateResult[0] : [];
+    if (rows[0]?.id) {
+      return rows[0];
+    }
+  }
+
+  // Fallback: first user in the same department that already has access settings.
+  const fallbackResult = await db.query(
+    `SELECT u.id, u.username, u.department
+     FROM users u
+     WHERE LOWER(COALESCE(u.department, '')) = $1
+       AND EXISTS (
+         SELECT 1
+         FROM user_accesses ua
+         WHERE ua.user_id = u.id
+       )
+     ORDER BY u.id ASC
+     LIMIT 1`,
+    {
+      bind: [String(department || "").toLowerCase()],
+      transaction,
+    }
+  );
+  const fallbackRows = Array.isArray(fallbackResult?.[0]) ? fallbackResult[0] : [];
+  return fallbackRows[0] || null;
+}
+
+async function cloneDepartmentTemplateAccessToUser(targetUserId, department, transaction) {
+  const templateTokens = DEPARTMENT_ACCESS_TEMPLATE_TOKENS[department];
+  if (!Array.isArray(templateTokens) || templateTokens.length === 0) {
+    return { attempted: false, applied: false, reason: "department_template_not_configured" };
+  }
+
+  const templateUser = await findDepartmentTemplateUser(department, transaction);
+  if (!templateUser?.id) {
+    return { attempted: true, applied: false, reason: "template_user_not_found" };
+  }
+
+  const templateAccessRows = await UserAccess.findAll({
+    where: { user_id: Number(templateUser.id) },
+    order: [["updatedAt", "DESC"], ["id", "DESC"]],
+    transaction,
+  });
+
+  if (!Array.isArray(templateAccessRows) || templateAccessRows.length === 0) {
+    return {
+      attempted: true,
+      applied: false,
+      reason: "template_user_has_no_access",
+      template_user: String(templateUser.username || "").trim(),
+    };
+  }
+
+  for (const accessRow of templateAccessRows) {
+    const userDatabase = normalizeDatabaseName(accessRow?.user_database || accessRow?.database_name || USER_DIRECTORY_DB);
+    await UserAccess.upsert(
+      {
+        user_id: Number(targetUserId),
+        user_database: userDatabase,
+        allowed_pages_json: String(accessRow?.allowed_pages_json || "[]"),
+        allowed_actions_json: String(accessRow?.allowed_actions_json || "[]"),
+        database_name: normalizeDatabaseName(accessRow?.database_name || userDatabase),
+      },
+      { transaction }
+    );
+  }
+
+  return {
+    attempted: true,
+    applied: true,
+    template_user: String(templateUser.username || "").trim(),
+    copied_rows: templateAccessRows.length,
+  };
 }
 
 function parseBase64Payload(fileDataBase64) {
@@ -203,127 +331,188 @@ async function deleteFromUserLinkedTables(userId, transaction) {
 }
 
 exports.getUsers = async (req, res) => {
-  try {
-    await ensureUserSuperColumn();
-    const users = await User.findAll({
-      attributes: ["id", "username", "company", "department", "telephone", "email", "role", "is_super_user", "createdAt"],
-      order: [["id", "DESC"]],
-    });
-    const requesterId = Number(req?.user?.id || req?.user?.userId || 0);
-    const requesterIsSuper = await isRequesterSuperAdmin(req);
-    const filtered = (Array.isArray(users) ? users : []).filter((u) => {
-      if (!isTargetProtectedSuperAdmin(u, requesterId, requesterIsSuper)) return true;
-      return false;
-    });
-    res.json(filtered);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
+  return runUserDirectoryDb(async () => {
+    try {
+      await ensureUserSuperColumn();
+      const users = await User.findAll({
+        attributes: ["id", "username", "company", "department", "telephone", "email", "role", "is_super_user", "createdAt"],
+        order: [["id", "DESC"]],
+      });
+      const requesterId = Number(req?.user?.id || req?.user?.userId || 0);
+      const requesterIsSuper = await isRequesterSuperAdmin(req);
+      const filtered = (Array.isArray(users) ? users : []).filter((u) => {
+        if (!isTargetProtectedSuperAdmin(u, requesterId, requesterIsSuper)) return true;
+        return false;
+      });
+      res.json(filtered);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 };
 
 exports.getUserById = async (req, res) => {
   const { id } = req.params;
-  try {
-    await ensureUserSuperColumn();
-    const user = await User.findByPk(id, {
-      attributes: ["id", "username", "company", "department", "telephone", "email", "role", "is_super_user"],
-    });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+  return runUserDirectoryDb(async () => {
+    try {
+      await ensureUserSuperColumn();
+      const user = await User.findByPk(id, {
+        attributes: ["id", "username", "company", "department", "telephone", "email", "role", "is_super_user"],
+      });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const requesterId = Number(req?.user?.id || req?.user?.userId || 0);
+      const requesterIsSuper = await isRequesterSuperAdmin(req);
+      if (isTargetProtectedSuperAdmin(user, requesterId, requesterIsSuper)) {
+        return res.status(403).json({ message: "Forbidden: Super admin user is protected." });
+      }
+      res.json(user);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
     }
-    const requesterId = Number(req?.user?.id || req?.user?.userId || 0);
-    const requesterIsSuper = await isRequesterSuperAdmin(req);
-    if (isTargetProtectedSuperAdmin(user, requesterId, requesterIsSuper)) {
-      return res.status(403).json({ message: "Forbidden: Super admin user is protected." });
-    }
-    res.json(user);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
+  });
 };
 
 exports.addUser = async (req, res) => {
-  const { username, company, department, telephone, email, password, role } = req.body;
+  const username = String(req.body?.username || "").trim();
+  const company = String(req.body?.company || "").trim();
+  const department = normalizeUserDepartment(req.body?.department);
+  const telephone = String(req.body?.telephone || "").trim();
+  const email = String(req.body?.email || "").trim();
+  const password = String(req.body?.password || "");
+  const role = String(req.body?.role || "").trim().toLowerCase();
 
-  try {
-    const existing = await User.findOne({ where: { email } });
-    if (existing) {
-      return res.status(400).json({ message: "Email already in use" });
+  return runUserDirectoryDb(async () => {
+    try {
+      if (!username || !company || !telephone || !email || !password || !role) {
+        return res.status(400).json({ message: "Missing required fields." });
+      }
+
+      if (!ALLOWED_USER_DEPARTMENT_SET.has(department)) {
+        return res.status(400).json({
+          message: `Department must be one of: ${ALLOWED_USER_DEPARTMENTS.join(", ")}`,
+        });
+      }
+
+      const existing = await User.findOne({ where: { email } });
+      if (existing) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const transaction = await db.transaction();
+      let user = null;
+      let templateAccessResult = { attempted: false, applied: false };
+      try {
+        user = await User.create({
+          username,
+          company,
+          department,
+          telephone,
+          email,
+          password: hashedPassword,
+          password_plain: String(password || "").trim(),
+          role: role || "user",
+        }, { transaction });
+
+        templateAccessResult = await cloneDepartmentTemplateAccessToUser(user.id, department, transaction);
+        await transaction.commit();
+      } catch (txErr) {
+        await transaction.rollback();
+        throw txErr;
+      }
+
+      res.status(201).json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        access_template: templateAccessResult,
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      username,
-      company,
-      department,
-      telephone,
-      email,
-      password: hashedPassword,
-      password_plain: String(password || "").trim(),
-      role: role || "user",
-    });
-
-    res.status(201).json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
+  });
 };
 
 exports.updateUser = async (req, res) => {
   const { id } = req.params;
-  const { username, company, department, telephone, email, password, role } = req.body;
+  const username = typeof req.body?.username === "undefined" ? undefined : String(req.body.username || "").trim();
+  const company = typeof req.body?.company === "undefined" ? undefined : String(req.body.company || "").trim();
+  const departmentRaw = typeof req.body?.department === "undefined" ? undefined : req.body.department;
+  const department = typeof departmentRaw === "undefined" ? undefined : normalizeUserDepartment(departmentRaw);
+  const telephone = typeof req.body?.telephone === "undefined" ? undefined : String(req.body.telephone || "").trim();
+  const email = typeof req.body?.email === "undefined" ? undefined : String(req.body.email || "").trim();
+  const password = typeof req.body?.password === "undefined" ? "" : String(req.body.password || "");
+  const role = typeof req.body?.role === "undefined" ? undefined : String(req.body.role || "").trim().toLowerCase();
 
-  try {
-    await ensureUserSuperColumn();
-    const user = await User.findByPk(id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const requesterId = Number(req?.user?.id || req?.user?.userId || 0);
-    const requesterIsSuper = await isRequesterSuperAdmin(req);
-    if (isTargetProtectedSuperAdmin(user, requesterId, requesterIsSuper)) {
-      return res.status(403).json({ message: "Forbidden: Super admin user is protected." });
-    }
-
-    if (email && email !== user.email) {
-      const existing = await User.findOne({ where: { email } });
-      if (existing && existing.id !== user.id) {
-        return res.status(400).json({ message: "Email already in use" });
+  return runUserDirectoryDb(async () => {
+    try {
+      await ensureUserSuperColumn();
+      const user = await User.findByPk(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
+      const requesterId = Number(req?.user?.id || req?.user?.userId || 0);
+      const requesterIsSuper = await isRequesterSuperAdmin(req);
+      if (isTargetProtectedSuperAdmin(user, requesterId, requesterIsSuper)) {
+        return res.status(403).json({ message: "Forbidden: Super admin user is protected." });
+      }
+
+      if (email && email !== user.email) {
+        const existing = await User.findOne({ where: { email } });
+        if (existing && existing.id !== user.id) {
+          return res.status(400).json({ message: "Email already in use" });
+        }
+      }
+
+      if (typeof department !== "undefined" && !ALLOWED_USER_DEPARTMENT_SET.has(department)) {
+        return res.status(400).json({
+          message: `Department must be one of: ${ALLOWED_USER_DEPARTMENTS.join(", ")}`,
+        });
+      }
+
+      user.username = username ?? user.username;
+      user.company = company ?? user.company;
+      user.department = department ?? user.department;
+      user.telephone = telephone ?? user.telephone;
+      user.email = email ?? user.email;
+      user.role = role ?? user.role;
+
+      if (password) {
+        user.password = await bcrypt.hash(password, 10);
+        user.password_plain = String(password || "").trim();
+      }
+
+      await user.save();
+
+      const persisted = await User.findByPk(user.id, {
+        attributes: ["id", "username", "company", "department", "telephone", "email", "role"],
+      });
+      if (!persisted) {
+        return res.status(500).json({ message: "User was updated but could not be reloaded." });
+      }
+
+      res.json({
+        id: persisted.id,
+        username: persisted.username,
+        company: persisted.company,
+        department: persisted.department,
+        telephone: persisted.telephone,
+        email: persisted.email,
+        role: persisted.role,
+        database_name: USER_DIRECTORY_DB,
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
     }
-
-    user.username = username ?? user.username;
-    user.company = company ?? user.company;
-    user.department = department ?? user.department;
-    user.telephone = telephone ?? user.telephone;
-    user.email = email ?? user.email;
-    user.role = role ?? user.role;
-
-    if (password) {
-      user.password = await bcrypt.hash(password, 10);
-      user.password_plain = String(password || "").trim();
-    }
-
-    await user.save();
-
-    res.json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
+  });
 };
 
 exports.getUserProfiles = async (req, res) => {
@@ -574,37 +763,39 @@ exports.deleteUser = async (req, res) => {
     return res.status(400).json({ message: "Invalid user id" });
   }
 
-  try {
-    await ensureUserSuperColumn();
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const requesterId = Number(req?.user?.id || req?.user?.userId || 0);
-    const requesterIsSuper = await isRequesterSuperAdmin(req);
-    if (isTargetProtectedSuperAdmin(user, requesterId, requesterIsSuper)) {
-      return res.status(403).json({ message: "Forbidden: Super admin user is protected." });
-    }
+  return runUserDirectoryDb(async () => {
+    try {
+      await ensureUserSuperColumn();
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const requesterId = Number(req?.user?.id || req?.user?.userId || 0);
+      const requesterIsSuper = await isRequesterSuperAdmin(req);
+      if (isTargetProtectedSuperAdmin(user, requesterId, requesterIsSuper)) {
+        return res.status(403).json({ message: "Forbidden: Super admin user is protected." });
+      }
 
-    await deleteFromUserLinkedTables(userId, null);
-    // Keep model-level cleanup as a fallback for environments where tables exist
-    // and are managed via Sequelize model metadata.
-    await UserLoginLog.destroy({ where: { user_id: userId } });
-    await UserAccess.destroy({ where: { user_id: userId } });
-    await User.destroy({ where: { id: userId } });
-    cleanupUserProfileAssets(userId);
+      await deleteFromUserLinkedTables(userId, null);
+      // Keep model-level cleanup as a fallback for environments where tables exist
+      // and are managed via Sequelize model metadata.
+      await UserLoginLog.destroy({ where: { user_id: userId } });
+      await UserAccess.destroy({ where: { user_id: userId } });
+      await User.destroy({ where: { id: userId } });
+      cleanupUserProfileAssets(userId);
 
-    res.json({ message: "User deleted successfully" });
-  } catch (err) {
-    if (err instanceof Sequelize.ForeignKeyConstraintError) {
-      const detail = String(err?.original?.detail || "").trim();
-      return res.status(409).json({
-        message: detail
-          ? `Cannot delete user because linked records still exist: ${detail}`
-          : "Cannot delete user because linked records still exist.",
-      });
+      res.json({ message: "User deleted successfully" });
+    } catch (err) {
+      if (err instanceof Sequelize.ForeignKeyConstraintError) {
+        const detail = String(err?.original?.detail || "").trim();
+        return res.status(409).json({
+          message: detail
+            ? `Cannot delete user because linked records still exist: ${detail}`
+            : "Cannot delete user because linked records still exist.",
+        });
+      }
+      console.error(err);
+      res.status(500).json({ message: err?.message || "Server error" });
     }
-    console.error(err);
-    res.status(500).json({ message: err?.message || "Server error" });
-  }
+  });
 };

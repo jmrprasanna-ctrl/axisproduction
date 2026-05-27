@@ -1,5 +1,5 @@
 <!--
-  System: PULMO WEB SYSTEM 
+  System: AXIS PRODUCTION SYSTEM 
   Owner : CRONIT SOLLUTIONS 
   Author: JMR Prasanna
 -->
@@ -8,7 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Invoice Details - PULMO TECHNOLOGIES</title>
+<title>Invoice Details - AXIS PRODUCTION</title>
 <link rel="stylesheet" href="../../assets/css/style.css">
 <link rel="stylesheet" href="../../assets/css/dashboard.css">
 <link rel="stylesheet" href="../../assets/css/invoice-view.css">
@@ -26,7 +26,7 @@
     <div class="invoice-address-controls">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
             <input type="checkbox" id="addressColomboChk">
-            Address Colombo
+            Colombo
         </label>
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
             <input type="checkbox" id="addressVChk" checked>
@@ -50,7 +50,11 @@
         </label>
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
             <input type="checkbox" id="logoWithNameChk">
-            Logo with Name
+            logo
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
+            <input type="checkbox" id="supportTechnicianChk">
+            Sup.Tech
         </label>
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
             <input type="checkbox" id="editModeChk">
@@ -183,15 +187,15 @@
             </svg>
         </button>
         <button class="btn btn-primary" type="button" onclick="openQuotationPage(1)">QUT1</button>
-        <button class="btn btn-primary" type="button" onclick="openQuotationPage(2)">QUT2</button>
-        <button class="btn btn-primary" type="button" onclick="openQuotationPage(3)">QUT3</button>
+        <button class="btn btn-primary" id="openQut2Btn" type="button" onclick="openQuotationPage(2)">QUT2</button>
+        <button class="btn btn-primary" id="openQut3Btn" type="button" onclick="openQuotationPage(3)">QUT3</button>
     </div>
 </div>
 
 <script src="../../assets/js/api.js?v=20260327qemail1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="../../assets/extracted/pages/invoices/view-invoice.inline-script-1.js"></script>
+<script src="../../assets/extracted/pages/invoices/view-invoice.inline-script-1.js?v=20260519p01"></script>
 </body>
 </html>
 
