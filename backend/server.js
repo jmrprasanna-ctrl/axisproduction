@@ -826,22 +826,6 @@ async function ensureUserAccessSchema() {
       SET user_database = 'axisproductdb'
       WHERE user_database IS NULL OR TRIM(user_database) = '';
     `);
-    await db.query(`
-      UPDATE user_accesses
-      SET user_database = CASE
-        WHEN LOWER(TRIM(user_database)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
-        ELSE LOWER(TRIM(user_database))
-      END
-      WHERE user_database IS NOT NULL AND TRIM(user_database) <> '';
-    `);
-    await db.query(`
-      UPDATE user_accesses
-      SET database_name = CASE
-        WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
-        ELSE LOWER(TRIM(database_name))
-      END
-      WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
-    `);
 
     await db.query(`
       ALTER TABLE user_accesses
@@ -860,11 +844,19 @@ async function ensureUserAccessSchema() {
     `);
 
     await db.query(`
+      DROP INDEX IF EXISTS user_accesses_user_db_unique_idx;
+    `);
+
+    await db.query(`
       WITH ranked AS (
         SELECT
           id,
           ROW_NUMBER() OVER (
-            PARTITION BY user_id, LOWER(COALESCE(user_database, 'axisproductdb'))
+            PARTITION BY user_id,
+              CASE
+                WHEN LOWER(TRIM(COALESCE(user_database, 'axisproductdb'))) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
+                ELSE LOWER(TRIM(COALESCE(user_database, 'axisproductdb')))
+              END
             ORDER BY "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC
           ) AS rn
         FROM user_accesses
@@ -876,7 +868,21 @@ async function ensureUserAccessSchema() {
     `);
 
     await db.query(`
-      DROP INDEX IF EXISTS user_accesses_user_db_unique_idx;
+      UPDATE user_accesses
+      SET user_database = CASE
+        WHEN LOWER(TRIM(user_database)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
+        ELSE LOWER(TRIM(user_database))
+      END
+      WHERE user_database IS NOT NULL AND TRIM(user_database) <> '';
+    `);
+
+    await db.query(`
+      UPDATE user_accesses
+      SET database_name = CASE
+        WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
+        ELSE LOWER(TRIM(database_name))
+      END
+      WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
     `);
 
     await db.query(`
