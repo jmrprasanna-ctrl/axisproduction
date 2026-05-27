@@ -215,8 +215,13 @@ async function ensureProfileRowForUser(userId) {
   await ensureUserProfileSchema();
   try {
     await db.query(
-      `INSERT INTO ${USER_PROFILE_TABLE} (user_id, "createdAt", "updatedAt")
-       VALUES ($1, NOW(), NOW())
+      `INSERT INTO ${USER_PROFILE_TABLE} (user_id, profile_name, "createdAt", "updatedAt")
+       SELECT u.id,
+              COALESCE(NULLIF(TRIM(u.username), ''), NULLIF(TRIM(u.email), ''), CONCAT('User ', u.id::text)),
+              NOW(),
+              NOW()
+       FROM users u
+       WHERE u.id = $1
        ON CONFLICT (user_id) DO NOTHING`,
       { bind: [userId] }
     );
@@ -228,13 +233,19 @@ async function ensureProfileRowForUser(userId) {
 
     // Fallback for legacy databases that still miss a UNIQUE/PK on user_id.
     await db.query(
-      `INSERT INTO ${USER_PROFILE_TABLE} (user_id, "createdAt", "updatedAt")
-       SELECT $1, NOW(), NOW()
-       WHERE NOT EXISTS (
-         SELECT 1
-         FROM ${USER_PROFILE_TABLE}
-         WHERE user_id = $1
-       )`,
+      `INSERT INTO ${USER_PROFILE_TABLE} (user_id, profile_name, "createdAt", "updatedAt")
+       SELECT u.id,
+              COALESCE(NULLIF(TRIM(u.username), ''), NULLIF(TRIM(u.email), ''), CONCAT('User ', u.id::text)),
+              NOW(),
+              NOW()
+       FROM users u
+       WHERE u.id = $1
+         AND NOT EXISTS (
+           SELECT 1
+           FROM ${USER_PROFILE_TABLE}
+           WHERE user_id = $1
+         )
+       LIMIT 1`,
       { bind: [userId] }
     );
   }
