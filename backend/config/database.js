@@ -6,11 +6,16 @@ const dotenv = require("dotenv");
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 
 const MODEL_PROXY_SYMBOL = Symbol("ModelProxy");
-const dbKeys = ["inventory", "demo"];
+const dbKeys = Array.from(
+  new Set([
+    normalizeDatabaseName(process.env.DB_NAME || "inventory") || "inventory",
+    normalizeDatabaseName(process.env.DB_DEMO_NAME || "demo") || "demo",
+  ])
+);
 const asyncLocalStorage = new AsyncLocalStorage();
 
-const MAIN_DB_NAME = "inventory";
-const DEMO_DB_NAME = "demo";
+const MAIN_DB_NAME = dbKeys[0] || "inventory";
+const DEMO_DB_NAME = dbKeys[1] || dbKeys[0] || "demo";
 const modelsByDb = Object.create(null);
 const sequelizeByDb = Object.create(null);
 const modelProxyByName = Object.create(null);
