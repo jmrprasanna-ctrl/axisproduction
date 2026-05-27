@@ -726,6 +726,38 @@ function darkenHex(hex, amount){
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+function getSidebarDefaultLogoUrl(){
+    const path = String(window.location.pathname || "").replace(/\\/g, "/");
+    const idx = path.lastIndexOf("/pages/");
+    if(idx === -1){
+        return "/assets/images/logo.png";
+    }
+    const rest = path.slice(idx + 7);
+    const depth = Math.max(0, rest.split("/").length - 1);
+    const prefix = "../".repeat(depth + 1);
+    return `${prefix}assets/images/logo.png`;
+}
+
+function ensureSidebarLogoFallback(){
+    const fallbackUrl = getSidebarDefaultLogoUrl();
+    document.querySelectorAll(".sidebar .logo img").forEach((img) => {
+        if(!img) return;
+        if(img.dataset.logoFallbackBound !== "1"){
+            img.dataset.logoFallbackBound = "1";
+            img.addEventListener("error", () => {
+                if(img.dataset.logoFallbackApplied === "1") return;
+                img.dataset.logoFallbackApplied = "1";
+                img.src = fallbackUrl;
+            });
+        }
+        const currentSrc = String(img.getAttribute("src") || "").trim();
+        if(!currentSrc){
+            img.dataset.logoFallbackApplied = "1";
+            img.src = fallbackUrl;
+        }
+    });
+}
+
 function applyUiSettingsToPage(settings){
     if(!settings) return;
     if(settings.primary_color){
@@ -776,6 +808,7 @@ function applyUiSettingsToPage(settings){
             : `${apiOrigin}${logoPath.startsWith("/") ? "" : "/"}${logoPath}`;
         const logoVersion = settings.logo_updated_at ? `?v=${encodeURIComponent(String(settings.logo_updated_at))}` : "";
         document.querySelectorAll(".sidebar .logo img").forEach((img) => {
+            img.dataset.logoFallbackApplied = "";
             img.src = `${absoluteLogoUrl}${logoVersion}`;
         });
     }
@@ -792,9 +825,11 @@ function applyUiSettingsToPage(settings){
             ? mappedLogoPath
             : `${apiOrigin}${mappedLogoPath.startsWith("/") ? "" : "/"}${mappedLogoPath}`;
         document.querySelectorAll(".sidebar .logo img").forEach((img) => {
+            img.dataset.logoFallbackApplied = "";
             img.src = absoluteMappedLogo;
         });
     }
+    ensureSidebarLogoFallback();
     if(settings.footer_text){
         const footer = document.getElementById("app-global-footer");
         if(footer){
@@ -866,9 +901,11 @@ function applyMappedBranding(){
             ? mappedLogoPath
             : `${apiOrigin}${mappedLogoPath.startsWith("/") ? "" : "/"}${mappedLogoPath}`;
         document.querySelectorAll(".sidebar .logo img").forEach((img) => {
+            img.dataset.logoFallbackApplied = "";
             img.src = absoluteMappedLogo;
         });
     }
+    ensureSidebarLogoFallback();
 }
 
 function normalizeAppName(appName){

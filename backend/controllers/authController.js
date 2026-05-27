@@ -205,6 +205,34 @@ function normalizeCompanyName(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
 }
 
+function toPublicMappedLogoUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  const normalized = raw.replace(/\\/g, "/");
+  if (normalized.startsWith("/storage/")) {
+    return normalized;
+  }
+  if (normalized.startsWith("storage/")) {
+    return `/${normalized}`;
+  }
+
+  const marker = "/storage/";
+  const idx = normalized.toLowerCase().indexOf(marker);
+  if (idx !== -1) {
+    const tail = normalized.slice(idx + marker.length).replace(/^\/+/, "");
+    return tail ? `/storage/${tail}` : "/storage";
+  }
+
+  // Ignore absolute filesystem paths that are not under /storage.
+  if (normalized.startsWith("/")) {
+    return null;
+  }
+
+  return `/${normalized.replace(/^\/+/, "")}`;
+}
+
 function buildPasswordResetSubject(companyNameRaw) {
   const companyName = normalizeCompanyName(companyNameRaw) || "AXIS PRODUCTION";
   return `Password Reset - ${companyName}`;
@@ -296,8 +324,7 @@ exports.login = async (req, res) => {
       mappedCompanyEmail = String(mappingRs.rows[0]?.mapped_email || "").trim().toLowerCase() || null;
       const logoPath = String(mappingRs.rows[0]?.logo_path || "").trim();
       if (logoPath) {
-        const clean = logoPath.replace(/\\/g, "/").replace(/^\/+/, "");
-        mappedCompanyLogoUrl = `/${clean}`;
+        mappedCompanyLogoUrl = toPublicMappedLogoUrl(logoPath);
       }
     }
 
