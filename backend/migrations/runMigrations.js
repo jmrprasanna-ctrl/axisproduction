@@ -29,7 +29,7 @@ async function listTargetDatabases() {
   try {
     const rs = await admin.query("SELECT datname FROM pg_database WHERE datistemplate = false");
     const existing = new Set((rs.rows || []).map((r) => normalizeDatabaseName(r.datname)).filter(Boolean));
-    const requested = normalizeDatabaseName(process.env.DB_MIGRATION_DATABASE || process.env.DB_NAME || "inventory") || "inventory";
+    const requested = normalizeDatabaseName(process.env.DB_MIGRATION_DATABASE || process.env.DB_NAME || "axisproductdb") || "axisproductdb";
     if (!existing.has(requested)) {
       return [];
     }

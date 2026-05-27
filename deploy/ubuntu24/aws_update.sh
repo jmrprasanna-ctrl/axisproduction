@@ -29,7 +29,7 @@ if [[ -f "${APP_DIR}/backend/package.json" ]]; then
 fi
 
 if [[ "${RUN_DB_CLEANUP}" == "true" ]]; then
-  echo "==> Running sample/test data cleanup (inventory + demo)"
+  echo "==> Running sample/test data cleanup (axisproductdb + demo)"
   npm --prefix backend run cleanup:test-data
 fi
 

@@ -383,8 +383,8 @@ exports.getSummary = async (req,res)=>{
         periodEnd = new Date(baseDate);
 
         const requestedDbName = String(
-            req.databaseName || req.user?.database_name || req.headers["x-database-name"] || process.env.DB_NAME || "inventory"
-        ).trim().toLowerCase() || "inventory";
+            req.databaseName || req.user?.database_name || req.headers["x-database-name"] || process.env.DB_NAME || "axisproductdb"
+        ).trim().toLowerCase() || "axisproductdb";
         queueDailyDatabaseBackup(requestedDbName).catch((backupErr) => {
             console.error("[dashboard] Daily database backup warning:", backupErr?.message || backupErr);
         });

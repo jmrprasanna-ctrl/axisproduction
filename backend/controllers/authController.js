@@ -8,8 +8,8 @@ const { Op } = require("sequelize");
 const { sendEmail } = require("../services/emailService");
 
 const isBcryptHash = (value = "") => /^\$2[aby]\$\d{2}\$/.test(value);
-const AUTH_DB_NAME = String(process.env.DB_NAME || "inventory").trim() || "inventory";
-const INVENTORY_DB_NAME = db.normalizeDatabaseName(AUTH_DB_NAME) || "inventory";
+const AUTH_DB_NAME = String(process.env.DB_NAME || "axisproductdb").trim() || "axisproductdb";
+const INVENTORY_DB_NAME = db.normalizeDatabaseName(AUTH_DB_NAME) || "axisproductdb";
 
 function getAuthDbClient() {
   return new Client({
@@ -306,7 +306,7 @@ exports.login = async (req, res) => {
         `SELECT database_name
          FROM user_accesses
          WHERE user_id = $1
-           AND LOWER(COALESCE(user_database, 'inventory')) = 'inventory'
+           AND LOWER(COALESCE(user_database, 'axisproductdb')) = 'axisproductdb'
          ORDER BY "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC
          LIMIT 1`,
         [user.id]

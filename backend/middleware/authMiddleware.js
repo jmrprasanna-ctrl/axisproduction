@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../config/database");
 const { Client } = require("pg");
 
-const DEFAULT_DB = db.normalizeDatabaseName(process.env.DB_NAME || "inventory") || "inventory";
+const DEFAULT_DB = db.normalizeDatabaseName(process.env.DB_NAME || "axisproductdb") || "axisproductdb";
 const ensuredMachineEntryDateDbs = new Set();
 const ensuredCatalogSeedDbs = new Set();
 const DEFAULT_CATEGORIES = [
@@ -52,7 +52,7 @@ async function resolveUserAssignedDatabase(userId) {
       `SELECT database_name
        FROM user_accesses
        WHERE user_id = $1
-         AND LOWER(COALESCE(user_database, 'inventory')) = 'inventory'
+         AND LOWER(COALESCE(user_database, 'axisproductdb')) = 'axisproductdb'
        ORDER BY "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC
        LIMIT 1`,
       [userId]

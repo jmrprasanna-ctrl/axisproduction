@@ -5,7 +5,7 @@ const { sendEmail } = require("../services/emailService");
 const ensuredInOutTableDbs = new Set();
 const ensuredSallaryTableDbs = new Set();
 const ensuredLeaveTableDbs = new Set();
-const INVENTORY_DB_NAME = "inventory";
+const INVENTORY_DB_NAME = "axisproductdb";
 const TIMESHEET_ACCESS_PATH = "/hr/time-sheet.html";
 
 const SALLARY_BANK_OPTIONS = new Set([
@@ -31,7 +31,7 @@ const USER_ROLE_ALIASES = new Set([
 ]);
 
 async function ensureInOutLogTable() {
-  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "inventory";
+  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "axisproductdb";
   if (ensuredInOutTableDbs.has(dbName)) return;
 
   await db.query(`
@@ -75,7 +75,7 @@ async function ensureInOutLogTable() {
 }
 
 async function ensureSallaryProfileTable() {
-  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "inventory";
+  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "axisproductdb";
   if (ensuredSallaryTableDbs.has(dbName)) return;
 
   await db.query(`
@@ -144,7 +144,7 @@ async function ensureSallaryProfileTable() {
 }
 
 async function ensureLeaveTable() {
-  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "inventory";
+  const dbName = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "axisproductdb";
   if (ensuredLeaveTableDbs.has(dbName)) return;
 
   await ensureSallaryProfileTable();
@@ -738,7 +738,7 @@ async function resolveMappedCompanyProfile(req) {
   }
 
   try {
-    const result = await db.withDatabase("inventory", async () => {
+    const result = await db.withDatabase("axisproductdb", async () => {
       const rs = await db.query(
         `SELECT cp.company_name,
                 cp.company_code,

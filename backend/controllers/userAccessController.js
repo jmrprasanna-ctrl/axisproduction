@@ -10,7 +10,7 @@ const EmailSetup = require("../models/EmailSetup");
 const Category = require("../models/Category");
 const CategoryModelOption = require("../models/CategoryModelOption");
 const DEMO_DB_NAME = "demo";
-const INVENTORY_DB_NAME = "inventory";
+const INVENTORY_DB_NAME = "axisproductdb";
 const RESERVED_DATABASES = new Set(["postgres", "template0", "template1"]);
 const DATABASE_REGISTRY_TABLE = "company_databases";
 const DATABASE_STORAGE_ROOT = path.resolve(__dirname, "../storage/databases");
@@ -802,7 +802,7 @@ async function findAccessFromMainDb(userId, userDatabase = INVENTORY_DB_NAME) {
     const rs = await client.query(
       `SELECT id, allowed_pages_json, allowed_actions_json, database_name, user_database, "updatedAt", "createdAt"
        FROM user_accesses
-       WHERE user_id = $1 AND (LOWER(COALESCE(user_database, 'inventory')) = $2)
+       WHERE user_id = $1 AND (LOWER(COALESCE(user_database, 'axisproductdb')) = $2)
        ORDER BY "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC
        LIMIT 1`,
       [userId, normalizeUserDatabase(userDatabase)]
@@ -1359,10 +1359,10 @@ exports.getAccessUsers = async (_req, res) => {
       await ensureUserMappingTable(mainDbClient);
 
       const accessRs = await mainDbClient.query(
-        `SELECT DISTINCT ON (user_id, LOWER(COALESCE(user_database, 'inventory')))
+        `SELECT DISTINCT ON (user_id, LOWER(COALESCE(user_database, 'axisproductdb')))
             user_id, user_database, database_name
          FROM user_accesses
-         ORDER BY user_id, LOWER(COALESCE(user_database, 'inventory')), "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC`
+         ORDER BY user_id, LOWER(COALESCE(user_database, 'axisproductdb')), "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC`
       );
       (accessRs.rows || []).forEach((row) => {
         const userId = Number(row?.user_id || 0);

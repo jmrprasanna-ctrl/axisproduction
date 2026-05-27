@@ -16,7 +16,7 @@ const ALLOWED_WARRANTY_PERIODS = new Set(["3 month", "6 month", "1 year", "2 yea
 const USER_PREF_TABLE = "user_preference_settings";
 const USER_QUOTATION_RENDER_TABLE = "user_quotation_render_settings";
 const ensuredUserPrefTableByDb = new Set();
-const INVENTORY_DB_NAME = "inventory";
+const INVENTORY_DB_NAME = "axisproductdb";
 
 function normalizeWarrantyPeriod(value){
     const raw = String(value || "").trim().toLowerCase();
@@ -311,7 +311,7 @@ async function resolveImagePath(req, dbColumn, envVariableName, defaultPath, fal
 }
 
 async function ensureUserPreferenceTableForCurrentDb() {
-    const activeDb = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "inventory";
+    const activeDb = String(db.getCurrentDatabase ? db.getCurrentDatabase() : "").trim().toLowerCase() || "axisproductdb";
     if (ensuredUserPrefTableByDb.has(activeDb)) return;
     await db.query(`
         CREATE TABLE IF NOT EXISTS ${USER_PREF_TABLE} (

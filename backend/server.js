@@ -75,7 +75,7 @@ let appHealth = {
   checks: null,
   startedAt: null,
 };
-let businessDatabaseNames = ["inventory", "demo"];
+let businessDatabaseNames = ["axisproductdb", "demo"];
 
 function toDbName(value) {
   return db.normalizeDatabaseName(value);
@@ -92,7 +92,7 @@ function getPgConfig(database) {
 }
 
 async function discoverBusinessDatabases() {
-  const defaults = new Set(["inventory", "demo", toDbName(process.env.DB_NAME || "inventory")].filter(Boolean));
+  const defaults = new Set(["axisproductdb", "demo", toDbName(process.env.DB_NAME || "axisproductdb")].filter(Boolean));
   const admin = new Client(getPgConfig("postgres"));
   await admin.connect();
   try {
@@ -100,7 +100,7 @@ async function discoverBusinessDatabases() {
     const existing = new Set((existingRs.rows || []).map((r) => toDbName(r.datname)).filter(Boolean));
     const discovered = new Set(defaults);
 
-    const inventoryClient = new Client(getPgConfig("inventory"));
+    const inventoryClient = new Client(getPgConfig("axisproductdb"));
     try {
       await inventoryClient.connect();
 
@@ -157,7 +157,7 @@ async function discoverBusinessDatabases() {
 async function runOnBusinessDatabases(task) {
   const targets = Array.isArray(businessDatabaseNames) && businessDatabaseNames.length
     ? businessDatabaseNames
-    : ["inventory", "demo"];
+    : ["axisproductdb", "demo"];
   for (const databaseName of targets) {
     await db.withDatabase(databaseName, async () => {
       await task(databaseName);
@@ -818,12 +818,12 @@ async function ensureUserAccessSchema() {
   await runOnBusinessDatabases(async () => {
     await db.query(`
       ALTER TABLE user_accesses
-      ADD COLUMN IF NOT EXISTS user_database VARCHAR(20) DEFAULT 'inventory';
+      ADD COLUMN IF NOT EXISTS user_database VARCHAR(20) DEFAULT 'axisproductdb';
     `);
 
     await db.query(`
       UPDATE user_accesses
-      SET user_database = 'inventory'
+      SET user_database = 'axisproductdb'
       WHERE user_database IS NULL OR TRIM(user_database) = '';
     `);
 
@@ -848,7 +848,7 @@ async function ensureUserAccessSchema() {
         SELECT
           id,
           ROW_NUMBER() OVER (
-            PARTITION BY user_id, LOWER(COALESCE(user_database, 'inventory'))
+            PARTITION BY user_id, LOWER(COALESCE(user_database, 'axisproductdb'))
             ORDER BY "updatedAt" DESC NULLS LAST, "createdAt" DESC NULLS LAST, id DESC
           ) AS rn
         FROM user_accesses
@@ -865,13 +865,13 @@ async function ensureUserAccessSchema() {
 
     await db.query(`
       CREATE UNIQUE INDEX user_accesses_user_db_unique_idx
-      ON user_accesses(user_id, LOWER(COALESCE(user_database, 'inventory')));
+      ON user_accesses(user_id, LOWER(COALESCE(user_database, 'axisproductdb')));
     `);
   });
 }
 
 async function ensureCompanyProfilesSchema() {
-  await db.withDatabase("inventory", async () => {
+  await db.withDatabase("axisproductdb", async () => {
     await db.query(`
       CREATE TABLE IF NOT EXISTS company_profiles (
         id SERIAL PRIMARY KEY,
@@ -903,7 +903,7 @@ async function ensureCompanyProfilesSchema() {
 }
 
 async function ensureUserMappingSchema() {
-  await db.withDatabase("inventory", async () => {
+  await db.withDatabase("axisproductdb", async () => {
     await db.query(`
       CREATE TABLE IF NOT EXISTS user_mappings (
         id SERIAL PRIMARY KEY,
@@ -1239,7 +1239,7 @@ async function startServer() {
     try {
       businessDatabaseNames = await discoverBusinessDatabases();
     } catch (_err) {
-      businessDatabaseNames = ["inventory", "demo"];
+      businessDatabaseNames = ["axisproductdb", "demo"];
     }
     for (const databaseName of businessDatabaseNames) {
       await db.registerDatabase(databaseName).catch(() => {});

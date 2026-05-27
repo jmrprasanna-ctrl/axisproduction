@@ -74,7 +74,7 @@ function getRequestDbName(req) {
   const normalized = db.normalizeDatabaseName(
     req?.databaseName || req?.user?.database_name || req?.headers?.["x-database-name"]
   );
-  return normalized || "inventory";
+  return normalized || "axisproductdb";
 }
 
 function ensureStorageDir(req) {

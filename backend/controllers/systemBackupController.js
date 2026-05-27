@@ -22,7 +22,7 @@ const {
   testDriveConnection,
 } = require("../services/googleDriveService");
 
-const INVENTORY_DB_NAME = "inventory";
+const INVENTORY_DB_NAME = "axisproductdb";
 const BACKUP_SETTINGS_TABLE = "system_backup_settings";
 const BACKUP_ENTRIES_TABLE = "system_backup_entries";
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;

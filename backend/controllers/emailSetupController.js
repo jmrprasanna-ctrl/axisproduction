@@ -2,7 +2,7 @@ const EmailSetup = require("../models/EmailSetup");
 const { Client } = require("pg");
 const db = require("../config/database");
 
-const INVENTORY_DB_NAME = "inventory";
+const INVENTORY_DB_NAME = "axisproductdb";
 const DEFAULT_COMPANY_NAME = "AXIS PRODUCTION";
 const DEFAULT_FROM_EMAIL = "info@axisproduction.com";
 const RESERVED_DATABASES = new Set(["postgres", "template0", "template1"]);

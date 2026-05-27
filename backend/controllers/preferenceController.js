@@ -7,7 +7,7 @@ const User = require("../models/User");
 const IMAGE_ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".bmp", ".gif", ".png"]);
 const STORAGE_ROOT = path.resolve(__dirname, "../storage/preferences");
 const LOGO_FILE_NAME = "system-logo";
-const DEFAULT_DB_NAME = "inventory";
+const DEFAULT_DB_NAME = "axisproductdb";
 const USER_PREF_TABLE = "user_preference_settings";
 
 const TEMPLATE_MAP = {

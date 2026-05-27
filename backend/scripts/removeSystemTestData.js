@@ -1,6 +1,6 @@
 const db = require("../config/database");
 
-const BUSINESS_DBS = ["inventory", "demo"];
+const BUSINESS_DBS = ["axisproductdb", "demo"];
 
 const SAMPLE_CONDITIONS = [
   "Payment within 30 days",

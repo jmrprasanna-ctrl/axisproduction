@@ -24,7 +24,7 @@ const PROFILE_IMAGE_ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".bmp", ".gif
 let userProfileSchemaEnsured = false;
 const ALLOWED_USER_DEPARTMENTS = ["Manager", "IT", "Finance", "Admin", "Cordinater", "Technician"];
 const ALLOWED_USER_DEPARTMENT_SET = new Set(ALLOWED_USER_DEPARTMENTS);
-const USER_DIRECTORY_DB = db.normalizeDatabaseName(process.env.DB_NAME || "inventory") || "inventory";
+const USER_DIRECTORY_DB = db.normalizeDatabaseName(process.env.DB_NAME || "axisproductdb") || "axisproductdb";
 const DEPARTMENT_ACCESS_TEMPLATE_TOKENS = {
   Manager: ["pulmo"],
   Finance: ["nishani"],
@@ -59,7 +59,7 @@ function runUserDirectoryDb(task) {
 
 function normalizeDatabaseName(value) {
   const normalized = db.normalizeDatabaseName(value);
-  return normalized || "inventory";
+  return normalized || "axisproductdb";
 }
 
 function getRequestDatabaseName(req) {

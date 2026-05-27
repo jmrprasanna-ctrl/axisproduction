@@ -12,7 +12,7 @@ const UserAccess = db.define("UserAccess", {
   user_database: {
     type: DataTypes.STRING,
     allowNull: false,
-    defaultValue: "inventory",
+    defaultValue: "axisproductdb",
   },
   allowed_pages_json: {
     type: DataTypes.TEXT,

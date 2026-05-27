@@ -20,7 +20,7 @@ function normalizeDbName(value) {
 function getDatabases() {
   const fromArg = parseArg("databases");
   const fromEnv = String(process.env.DB_MIGRATION_DATABASES || "").trim();
-  const source = fromArg || fromEnv || "inventory";
+  const source = fromArg || fromEnv || "axisproductdb";
   const dbs = source
     .split(",")
     .map((x) => normalizeDbName(x))
@@ -91,7 +91,7 @@ async function main() {
 
   const databases = getDatabases();
   if (!databases.length) {
-    throw new Error("No valid databases provided. Use --databases=inventory");
+    throw new Error("No valid databases provided. Use --databases=axisproductdb");
   }
 
   console.log("==> Running SQL migration file");
