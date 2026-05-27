@@ -61,7 +61,7 @@ axis_production/
 │ navbar.html
 │
 ├── database/
-│ inventory.sql
+│ axisproductdb.sql
 ├── package.json
 └── README.md
 
