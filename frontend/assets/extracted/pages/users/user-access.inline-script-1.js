@@ -3,7 +3,7 @@ const userSelectEl = document.getElementById("userSelect");
         const superUserCheckboxEl = document.getElementById("superUserCheckbox");
         const accessMatrixEl = document.getElementById("accessMatrix");
         let moduleOptions = [];
-        let defaultDatabaseName = "inventory";
+        let defaultDatabaseName = "axisproductdb";
 
         function toActionKey(path, action){
             return `${String(path || "").trim().toLowerCase()}::${String(action || "").trim().toLowerCase()}`;
@@ -173,12 +173,14 @@ const userSelectEl = document.getElementById("userSelect");
                     opt.textContent = entry.label;
                     databaseSelectEl.appendChild(opt);
                 });
-                if(normalizedRows.some((x) => x.name === "inventory")){
-                    defaultDatabaseName = "inventory";
-                }else if(currentDb){
+                if(currentDb && normalizedRows.some((x) => x.name === currentDb)){
                     defaultDatabaseName = currentDb;
+                }else if(normalizedRows.some((x) => x.name === "axisproductdb")){
+                    defaultDatabaseName = "axisproductdb";
                 }else if(normalizedRows.length){
                     defaultDatabaseName = normalizedRows[0].name;
+                }else if(currentDb){
+                    defaultDatabaseName = currentDb;
                 }
                 if(defaultDatabaseName){
                     databaseSelectEl.value = defaultDatabaseName;
@@ -317,8 +319,16 @@ const userSelectEl = document.getElementById("userSelect");
             superUserCheckboxEl.disabled = true;
             const queryUserId = new URLSearchParams(window.location.search).get("userId");
             if(queryUserId){
-                const inventoryRef = `inventory:${queryUserId}`;
-                userSelectEl.value = inventoryRef;
+                const preferredDb = String(defaultDatabaseName || databaseSelectEl.value || "axisproductdb").trim().toLowerCase() || "axisproductdb";
+                const preferredRef = `${preferredDb}:${queryUserId}`;
+                userSelectEl.value = preferredRef;
+                if(!userSelectEl.value){
+                    const suffix = `:${queryUserId}`;
+                    const fallbackOption = Array.from(userSelectEl.options || []).find((opt) => String(opt.value || "").trim().endsWith(suffix));
+                    if(fallbackOption){
+                        userSelectEl.value = String(fallbackOption.value || "").trim();
+                    }
+                }
                 if(userSelectEl.value){
                     await editAccess();
                 }

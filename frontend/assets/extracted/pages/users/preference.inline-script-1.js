@@ -62,7 +62,7 @@ function byId(id){
                 : userRef;
             const userId = Number(rawUserId || 0);
             const safeUserId = Number.isFinite(userId) && userId > 0 ? userId : 0;
-            const targetDb = databaseName || getActiveDatabaseName() || "inventory";
+            const targetDb = databaseName || getActiveDatabaseName() || "axisproductdb";
             statusEl.textContent = `Selected: ${label || userRef} | Save Folder: preferences/${targetDb}/user_${safeUserId}`;
         }
 
@@ -176,7 +176,7 @@ function byId(id){
         function addTargetOption(select, optionData, seenKeys){
             if(!select || !optionData) return;
             const userId = Number(optionData.user_id || optionData.id || 0);
-            const userDb = String(optionData.user_database || "inventory").trim().toLowerCase() || "inventory";
+            const userDb = String(optionData.user_database || "axisproductdb").trim().toLowerCase() || "axisproductdb";
             const dbName = String(optionData.database_name || "").trim().toLowerCase();
             if(!Number.isFinite(userId) || userId <= 0 || !dbName){
                 return;
@@ -207,9 +207,9 @@ function byId(id){
             }
             try{
                 const currentUserId = Number(localStorage.getItem("userId") || 0);
-                const currentUserDb = String(getActiveDatabaseName() || "inventory").trim().toLowerCase();
+                const currentUserDb = String(getActiveDatabaseName() || "axisproductdb").trim().toLowerCase();
                 const fallbackSelection = `${currentUserDb}:${currentUserId}`;
-                const fallbackInventorySelection = `inventory:${currentUserId}`;
+                const fallbackAxisSelection = `axisproductdb:${currentUserId}`;
 
                 select.innerHTML = "";
                 const seenKeys = new Set();
@@ -221,7 +221,7 @@ function byId(id){
                             user_id: Number(entry?.user_id || 0),
                             username: String(entry?.username || "").trim(),
                             email: String(entry?.email || "").trim(),
-                            user_database: "inventory",
+                            user_database: "axisproductdb",
                             database_name: String(entry?.database_name || "").trim().toLowerCase(),
                         }, seenKeys);
                     });
@@ -233,7 +233,7 @@ function byId(id){
                     const users = Array.isArray(accessRes?.users) ? accessRes.users : [];
                     users.forEach((user) => {
                         const selectionKey = String(user?.selection_key || "").trim();
-                        const userDb = String(user?.user_database || "").trim().toLowerCase() || "inventory";
+                        const userDb = String(user?.user_database || "").trim().toLowerCase() || "axisproductdb";
                         const parsedUserId = Number(String(selectionKey.split(":")[1] || "").trim() || 0);
                         addTargetOption(select, {
                             user_id: parsedUserId,
@@ -273,7 +273,7 @@ function byId(id){
                     let matched = false;
                     for(let i = 0; i < select.options.length; i += 1){
                         const value = String(select.options[i].value || "").trim();
-                        if(value === fallbackSelection || value === fallbackInventorySelection){
+                        if(value === fallbackSelection || value === fallbackAxisSelection){
                             select.selectedIndex = i;
                             matched = true;
                             break;

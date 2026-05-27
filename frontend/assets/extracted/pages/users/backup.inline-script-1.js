@@ -17,7 +17,7 @@
     const restoreDbFileInputEl = byId("restoreDbFileInput");
     const historyBodyEl = byId("dbBackupHistoryBody");
 
-    let currentDatabaseName = "inventory";
+    let currentDatabaseName = "axisproductdb";
     let hasSavedDriveCredentials = false;
     let hasSavedOauthClient = false;
     let hasConnectedOauth = false;
@@ -47,7 +47,7 @@
 
     function selectedDatabase() {
         const val = String(dbSelectEl?.value || "").trim().toLowerCase();
-        return val || currentDatabaseName || "inventory";
+        return val || currentDatabaseName || "axisproductdb";
     }
 
     function selectedAuthType() {
@@ -123,7 +123,7 @@
             dbSelectEl.appendChild(optionEl);
         });
 
-        const defaultDb = String(res?.current || "").trim().toLowerCase() || "inventory";
+        const defaultDb = String(res?.current || "").trim().toLowerCase() || "axisproductdb";
         currentDatabaseName = defaultDb;
         if (options.some((x) => x.name === defaultDb)) {
             dbSelectEl.value = defaultDb;

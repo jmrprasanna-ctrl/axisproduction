@@ -1,5 +1,5 @@
 const DEFAULT_COMPANY_NAME = "AXIS PRODUCTION";
-const DEFAULT_MAPPED_DB = "inventory";
+const DEFAULT_MAPPED_DB = "axisproductdb";
 const DEFAULT_FROM_EMAIL = "info@axisproduction.com";
 let isLoadingMappedSetup = false;
 let adminMappedOptionsCache = null;
