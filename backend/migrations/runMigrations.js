@@ -5,6 +5,11 @@ const { Client } = require("pg");
 
 const MIGRATIONS_TABLE = "schema_migrations";
 const MIGRATIONS_DIR = path.resolve(__dirname, "sql");
+const LEGACY_DB_ALIASES = Object.freeze({
+  inventory: "axisproductdb",
+  axiscmsdb: "axisproductdb",
+  axcmsdb: "axisproductdb",
+});
 
 function getDbConfig(database) {
   return {
@@ -20,7 +25,7 @@ function normalizeDatabaseName(name) {
   const normalized = String(name || "").trim().toLowerCase();
   if (!normalized) return "";
   if (!/^[a-z0-9_]+$/.test(normalized)) return "";
-  return normalized;
+  return LEGACY_DB_ALIASES[normalized] || normalized;
 }
 
 async function listTargetDatabases() {

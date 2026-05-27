@@ -6,6 +6,11 @@ const dotenv = require("dotenv");
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 
 const MODEL_PROXY_SYMBOL = Symbol("ModelProxy");
+const LEGACY_DB_ALIASES = Object.freeze({
+  inventory: "axisproductdb",
+  axiscmsdb: "axisproductdb",
+  axcmsdb: "axisproductdb",
+});
 const dbKeys = Array.from(
   new Set([
     normalizeDatabaseName(process.env.DB_NAME || "axisproductdb") || "axisproductdb",
@@ -38,7 +43,7 @@ function normalizeDatabaseName(name) {
   const normalized = String(name || "").trim().toLowerCase();
   if (!normalized) return "";
   if (!/^[a-z0-9_]+$/.test(normalized)) return "";
-  return normalized;
+  return LEGACY_DB_ALIASES[normalized] || normalized;
 }
 
 function createSequelize(databaseName) {

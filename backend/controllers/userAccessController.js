@@ -295,6 +295,16 @@ function expandImplicitActionDependencies(actionKeys) {
   const set = new Set((Array.isArray(actionKeys) ? actionKeys : []).map((x) => String(x || "").trim().toLowerCase()).filter(Boolean));
   const add = (path, action) => set.add(toActionKey(path, action));
 
+  // If any non-view action is granted for a page, grant view automatically.
+  Array.from(set).forEach((key) => {
+    const idx = key.lastIndexOf("::");
+    if (idx === -1) return;
+    const path = key.slice(0, idx);
+    const action = key.slice(idx + 2);
+    if (!path || !action || action === "view") return;
+    add(path, "view");
+  });
+
                                                                               
   if (set.has(toActionKey("/products/product-list.html", "edit"))) {
     add("/products/edit-product.html", "view");
@@ -369,7 +379,7 @@ function parseAllowedPages(row) {
 function parseAllowedActions(row) {
   try {
     const parsed = JSON.parse(String(row?.allowed_actions_json || "[]"));
-    return normalizeActions(parsed);
+    return expandImplicitActionDependencies(parsed);
   } catch (_err) {
     return [];
   }
@@ -502,6 +512,47 @@ async function ensureDatabaseRegistryTable(client) {
     ALTER TABLE ${DATABASE_REGISTRY_TABLE}
     ADD COLUMN IF NOT EXISTS folder_name VARCHAR(120);
   `);
+  await client.query(`
+    WITH normalized AS (
+      SELECT
+        id,
+        CASE
+          WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN '${INVENTORY_DB_NAME}'
+          ELSE LOWER(TRIM(database_name))
+        END AS normalized_name,
+        ROW_NUMBER() OVER (
+          PARTITION BY
+            CASE
+              WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN '${INVENTORY_DB_NAME}'
+              ELSE LOWER(TRIM(database_name))
+            END
+          ORDER BY "updatedAt" DESC NULLS LAST, id DESC
+        ) AS rn
+      FROM ${DATABASE_REGISTRY_TABLE}
+      WHERE database_name IS NOT NULL AND TRIM(database_name) <> ''
+    )
+    DELETE FROM ${DATABASE_REGISTRY_TABLE} t
+    USING normalized n
+    WHERE t.id = n.id
+      AND n.rn > 1;
+  `);
+  await client.query(`
+    WITH normalized AS (
+      SELECT
+        id,
+        CASE
+          WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN '${INVENTORY_DB_NAME}'
+          ELSE LOWER(TRIM(database_name))
+        END AS normalized_name
+      FROM ${DATABASE_REGISTRY_TABLE}
+      WHERE database_name IS NOT NULL AND TRIM(database_name) <> ''
+    )
+    UPDATE ${DATABASE_REGISTRY_TABLE} t
+    SET database_name = n.normalized_name
+    FROM normalized n
+    WHERE t.id = n.id
+      AND LOWER(TRIM(t.database_name)) <> n.normalized_name;
+  `);
 }
 
 async function ensureCompanyRegistryTable(client) {
@@ -554,7 +605,10 @@ async function ensureUserMappingTable(client) {
   `);
   await client.query(`
     UPDATE user_mappings
-    SET database_name = LOWER(TRIM(database_name))
+    SET database_name = CASE
+      WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN '${INVENTORY_DB_NAME}'
+      ELSE LOWER(TRIM(database_name))
+    END
     WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
   `);
   await client.query(`
@@ -857,7 +911,7 @@ function getDbConfig() {
     port: Number(process.env.DB_PORT || 5432),
     user: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || INVENTORY_DB_NAME,
+    database: db.normalizeDatabaseName(process.env.DB_NAME || INVENTORY_DB_NAME) || INVENTORY_DB_NAME,
   };
 }
 

@@ -24,6 +24,22 @@ const userSelectEl = document.getElementById("userSelect");
                 .filter(Boolean);
         }
 
+        function findActionCheckbox(path, action){
+            return Array.from(accessMatrixEl.querySelectorAll("input[type='checkbox'][data-action-key]"))
+                .find((cb) => String(cb.dataset.path || "") === String(path || "") && String(cb.dataset.action || "") === String(action || ""));
+        }
+
+        function enforceViewDependency(path){
+            const viewCb = findActionCheckbox(path, "view");
+            if(!viewCb) return;
+            const rowActionCbs = Array.from(accessMatrixEl.querySelectorAll("input[type='checkbox'][data-action-key]"))
+                .filter((cb) => String(cb.dataset.path || "") === String(path || ""));
+            const hasNonViewChecked = rowActionCbs.some((cb) => String(cb.dataset.action || "") !== "view" && cb.checked);
+            if(hasNonViewChecked){
+                viewCb.checked = true;
+            }
+        }
+
         function renderAccessMatrix(){
             accessMatrixEl.innerHTML = "";
             moduleOptions.forEach((group) => {
@@ -234,6 +250,14 @@ const userSelectEl = document.getElementById("userSelect");
             const warrantyLegacy = "/support/warrenty-invoice-view.html";
 
             const allowedActionsSet = new Set(getSelectedActionValues().map((x) => String(x || "").trim().toLowerCase()).filter(Boolean));
+            Array.from(allowedActionsSet).forEach((key) => {
+                const idx = key.lastIndexOf("::");
+                if(idx === -1) return;
+                const path = key.slice(0, idx);
+                const action = key.slice(idx + 2);
+                if(!path || !action || action === "view") return;
+                allowedActionsSet.add(`${path}::view`);
+            });
             if(allowedActionsSet.has(`${warrantyCanonical}::view`) || allowedActionsSet.has(`${warrantyLegacy}::view`)){
                 allowedActionsSet.add(`${warrantyCanonical}::view`);
                 allowedActionsSet.add(`${warrantyLegacy}::view`);
@@ -306,6 +330,36 @@ const userSelectEl = document.getElementById("userSelect");
         if(clearAccessBtn){
             clearAccessBtn.addEventListener("click", clearAccess);
         }
+        accessMatrixEl.addEventListener("change", (event) => {
+            const target = event.target;
+            if(!target || target.tagName !== "INPUT" || target.type !== "checkbox" || !target.dataset.actionKey){
+                return;
+            }
+            const path = String(target.dataset.path || "");
+            const action = String(target.dataset.action || "");
+            if(!path || !action){
+                return;
+            }
+            if(action === "view"){
+                if(!target.checked){
+                    const sameRow = Array.from(accessMatrixEl.querySelectorAll("input[type='checkbox'][data-action-key]"))
+                        .filter((cb) => String(cb.dataset.path || "") === path && String(cb.dataset.action || "") !== "view");
+                    const hasDependentChecked = sameRow.some((cb) => cb.checked);
+                    if(hasDependentChecked){
+                        target.checked = true;
+                    }
+                }
+                return;
+            }
+            if(target.checked){
+                const viewCb = findActionCheckbox(path, "view");
+                if(viewCb){
+                    viewCb.checked = true;
+                }
+            }else{
+                enforceViewDependency(path);
+            }
+        });
 
         (async function init(){
             const role = (localStorage.getItem("role") || "").toLowerCase();

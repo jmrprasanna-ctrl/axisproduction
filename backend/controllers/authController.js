@@ -8,8 +8,8 @@ const { Op } = require("sequelize");
 const { sendEmail } = require("../services/emailService");
 
 const isBcryptHash = (value = "") => /^\$2[aby]\$\d{2}\$/.test(value);
-const AUTH_DB_NAME = String(process.env.DB_NAME || "axisproductdb").trim() || "axisproductdb";
-const INVENTORY_DB_NAME = db.normalizeDatabaseName(AUTH_DB_NAME) || "axisproductdb";
+const AUTH_DB_NAME = db.normalizeDatabaseName(process.env.DB_NAME || "axisproductdb") || "axisproductdb";
+const INVENTORY_DB_NAME = AUTH_DB_NAME;
 
 function getAuthDbClient() {
   return new Client({

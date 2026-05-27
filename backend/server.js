@@ -826,6 +826,22 @@ async function ensureUserAccessSchema() {
       SET user_database = 'axisproductdb'
       WHERE user_database IS NULL OR TRIM(user_database) = '';
     `);
+    await db.query(`
+      UPDATE user_accesses
+      SET user_database = CASE
+        WHEN LOWER(TRIM(user_database)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
+        ELSE LOWER(TRIM(user_database))
+      END
+      WHERE user_database IS NOT NULL AND TRIM(user_database) <> '';
+    `);
+    await db.query(`
+      UPDATE user_accesses
+      SET database_name = CASE
+        WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
+        ELSE LOWER(TRIM(database_name))
+      END
+      WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
+    `);
 
     await db.query(`
       ALTER TABLE user_accesses
@@ -923,7 +939,10 @@ async function ensureUserMappingSchema() {
     `);
     await db.query(`
       UPDATE user_mappings
-      SET database_name = LOWER(TRIM(database_name))
+      SET database_name = CASE
+        WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
+        ELSE LOWER(TRIM(database_name))
+      END
       WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
     `);
     await db.query(`
@@ -992,6 +1011,28 @@ async function ensureUserInvoiceMappingSchema() {
     await db.query(`ALTER TABLE user_invoice_mappings ADD COLUMN IF NOT EXISTS seal_q2_enabled BOOLEAN NOT NULL DEFAULT FALSE;`);
     await db.query(`ALTER TABLE user_invoice_mappings ADD COLUMN IF NOT EXISTS sign_q3_enabled BOOLEAN NOT NULL DEFAULT FALSE;`);
     await db.query(`ALTER TABLE user_invoice_mappings ADD COLUMN IF NOT EXISTS seal_q3_enabled BOOLEAN NOT NULL DEFAULT FALSE;`);
+    await db.query(`
+      UPDATE user_invoice_mappings
+      SET database_name = CASE
+        WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
+        ELSE LOWER(TRIM(database_name))
+      END
+      WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
+    `);
+    await db.query(`
+      WITH ranked AS (
+        SELECT id,
+               ROW_NUMBER() OVER (
+                 PARTITION BY user_id, LOWER(COALESCE(database_name, ''))
+                 ORDER BY "updatedAt" DESC NULLS LAST, id DESC
+               ) AS rn
+        FROM user_invoice_mappings
+      )
+      DELETE FROM user_invoice_mappings uim
+      USING ranked r
+      WHERE uim.id = r.id
+        AND r.rn > 1;
+    `);
   });
 }
 
@@ -1077,6 +1118,28 @@ async function ensureUserQuotationRenderSettingsSchema() {
     await db.query(`
       ALTER TABLE user_quotation_render_settings
       ADD COLUMN IF NOT EXISTS render_overrides_json TEXT NOT NULL DEFAULT '{}';
+    `);
+    await db.query(`
+      UPDATE user_quotation_render_settings
+      SET database_name = CASE
+        WHEN LOWER(TRIM(database_name)) IN ('inventory', 'axiscmsdb', 'axcmsdb') THEN 'axisproductdb'
+        ELSE LOWER(TRIM(database_name))
+      END
+      WHERE database_name IS NOT NULL AND TRIM(database_name) <> '';
+    `);
+    await db.query(`
+      WITH ranked AS (
+        SELECT id,
+               ROW_NUMBER() OVER (
+                 PARTITION BY user_id, LOWER(COALESCE(database_name, '')), LOWER(COALESCE(quotation_type, ''))
+                 ORDER BY "updatedAt" DESC NULLS LAST, id DESC
+               ) AS rn
+        FROM user_quotation_render_settings
+      )
+      DELETE FROM user_quotation_render_settings uqr
+      USING ranked r
+      WHERE uqr.id = r.id
+        AND r.rn > 1;
     `);
   });
 }
