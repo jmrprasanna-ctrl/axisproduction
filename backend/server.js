@@ -948,7 +948,6 @@ async function ensureUserMappingSchema() {
       DROP CONSTRAINT IF EXISTS user_mappings_user_db_unique;
     `);
     await db.query(`
-      UPDATE user_mappings
       WITH ranked AS (
         SELECT id,
                ROW_NUMBER() OVER (
