@@ -9,11 +9,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AXIS PRODUCTION SYSTEM - Loading</title>
+<link rel="preload" as="image" href="../assets/images/axis-loading-logo.png">
 <link rel="stylesheet" href="../assets/css/loading.css">
 </head>
 <body>
     <main class="loading-wrap" aria-live="polite">
-        <img class="loading-logo" src="../assets/images/axis-loading-logo.png" alt="AXIS PRODUCTION SYSTEM">
+        <img class="loading-logo" src="../assets/images/axis-loading-logo.png" alt="AXIS PRODUCTION SYSTEM" loading="eager" decoding="sync" fetchpriority="high">
         <div class="loading-spinner" aria-label="Loading">
             <span></span><span></span><span></span><span></span>
             <span></span><span></span><span></span><span></span>
