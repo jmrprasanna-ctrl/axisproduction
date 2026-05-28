@@ -180,6 +180,12 @@ const ACCESS_MODULE_OPTIONS = [
     ],
   },
   {
+    module: "Purchase Order",
+    items: [
+      { path: "/purchase/create-po.html", label: "Create PO", actions: ["view", "add"] },
+    ],
+  },
+  {
     module: "Communication",
     items: [
       { path: "/messages/messages.html", label: "Messages", actions: ["view", "add", "delete"] },

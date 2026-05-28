@@ -378,6 +378,13 @@ function renderSidebarMenuByAccess(){
         { path: "/dashboard.html", label: "Dashboard" },
         { path: "/services/service-list.html", label: "Services" },
         {
+            path: "/purchase/create-po.html",
+            label: "Purchase Order",
+            children: [
+                { path: "/purchase/create-po.html", label: "Create PO" }
+            ]
+        },
+        {
             path: "/products/product-list.html",
             label: "Administration",
             children: [

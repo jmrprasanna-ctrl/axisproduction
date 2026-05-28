@@ -1,0 +1,134 @@
+<!--
+  System: AXIS PRODUCTION SYSTEM
+  Owner : CRONIT SOLLUTIONS
+  Author: JMR Prasanna
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create PO - AXIS PRODUCTION</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+<link rel="stylesheet" href="../../assets/css/dashboard.css">
+<link rel="stylesheet" href="../../assets/extracted/pages/purchase/create-po.inline-style-1.css">
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo">
+        <img src="../../assets/images/logo.png" alt="Logo">
+        <span>AXIS PRODUCTION</span>
+    </div>
+    <ul class="nav-links">
+        <li><a href="../dashboard.html">Dashboard</a></li>
+        <li><a href="../services/service-list.html">Services</a></li>
+        <li><a href="create-po.html">Create PO</a></li>
+        <li><a href="../products/product-list.html">Products</a></li>
+        <li><a href="../customers/customer-list.html">Customers</a></li>
+        <li><a href="../invoices/invoice-list.html">Invoices</a></li>
+        <li><a href="../vendors/list-vendor.html">Vendors</a></li>
+        <li><a href="../expenses/expense-list.html">Expenses</a></li>
+        <li><a href="../reports/sales-report.html">Reports</a></li>
+        <li><a href="../analytics/sales-chart.html">Analytics</a></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <header class="page-head">
+        <h2>Create PO</h2>
+        <a class="icon-btn" href="../dashboard.html" aria-label="Back to dashboard" title="Back to dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </header>
+
+    <div class="form-container po-shell">
+        <form id="createPoForm">
+            <div class="po-grid">
+                <div class="field">
+                    <label for="poVendor">Vendor</label>
+                    <select id="poVendor" required>
+                        <option value="">Select Vendor</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="poDate">PO Date</label>
+                    <input type="date" id="poDate" required>
+                </div>
+
+                <div class="field field-with-action">
+                    <label for="poNumber">PO Number</label>
+                    <div class="inline-input-group">
+                        <input type="text" id="poNumber" readonly required>
+                        <button type="button" class="mini-btn" id="generatePoBtn">Create</button>
+                    </div>
+                </div>
+
+                <div class="field field-with-action">
+                    <label for="batchNumber">Batch No</label>
+                    <div class="inline-input-group">
+                        <input type="text" id="batchNumber" readonly required>
+                        <button type="button" class="mini-btn" id="generateBatchBtn">Create</button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="deliveryDate">Delivery Date</label>
+                    <input type="date" id="deliveryDate">
+                </div>
+
+                <div class="field po-notes">
+                    <label for="poNotes">Notes</label>
+                    <textarea id="poNotes" rows="3" placeholder="Optional production / supply notes"></textarea>
+                </div>
+            </div>
+
+            <div class="po-table-head">
+                <h3>PO Items</h3>
+                <button type="button" class="icon-btn" id="addPoRowBtn" aria-label="Add PO item row" title="Add PO item row">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="table-wrap">
+                <table class="po-table" id="poItemsTable">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Measurement</th>
+                            <th>QTY</th>
+                            <th>Unit Price</th>
+                            <th>Line Total</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="poItemsBody"></tbody>
+                </table>
+            </div>
+
+            <div class="po-summary">
+                <div class="summary-label">Grand Total</div>
+                <div class="summary-value" id="poGrandTotal">0.00</div>
+            </div>
+
+            <div class="po-actions">
+                <button type="submit" class="icon-btn" id="savePoBtn" aria-label="Create PO" title="Create PO">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5.5 3.5h11l2 2V20.5H5.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M8 3.5v5h7v-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M8 14h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/extracted/pages/purchase/create-po.inline-script-1.js"></script>
+</body>
+</html>
