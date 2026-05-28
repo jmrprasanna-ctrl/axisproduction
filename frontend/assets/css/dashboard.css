@@ -13,7 +13,7 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  color: #f6fbff;
+  color: #111111;
   background: var(--sidebar-color, var(--primary));
   box-shadow: 10px 0 30px rgba(29, 41, 44, 0.28);
 }
@@ -44,6 +44,7 @@ body {
   font-size: 1.05rem;
   letter-spacing: 0.02em;
   line-height: 1.1;
+  color: #111111;
 }
 
 .sidebar .nav-links {
@@ -61,7 +62,7 @@ body {
   align-items: center;
   gap: 9px;
   text-decoration: none;
-  color: rgba(247, 252, 255, 0.94);
+  color: #111111;
   border-radius: 12px;
   padding: 11px 12px;
   font-weight: 620;
