@@ -15,8 +15,8 @@ function normalizeModeTheme(value){
 }
 
 function applyThemeForm(settings){
-    const dashboard = normalizeHex(settings?.primary_color, "#4b8fbd");
-    const bg = normalizeHex(settings?.background_color, "#eaf2f7");
+    const dashboard = normalizeHex(settings?.primary_color, "#4f8fb8");
+    const bg = normalizeHex(settings?.background_color, "#eef1f3");
     const button = normalizeHex(settings?.button_color, dashboard);
     const mode = normalizeModeTheme(settings?.mode_theme);
 
@@ -48,8 +48,8 @@ async function loadThemeSettings(){
 }
 
 async function saveThemeSettings(){
-    const dashboardColor = normalizeHex(document.getElementById("dashboardColorPreset")?.value, "#4b8fbd");
-    const backgroundColor = normalizeHex(document.getElementById("backgroundColorInput")?.value, "#eaf2f7");
+    const dashboardColor = normalizeHex(document.getElementById("dashboardColorPreset")?.value, "#4f8fb8");
+    const backgroundColor = normalizeHex(document.getElementById("backgroundColorInput")?.value, "#eef1f3");
     const buttonColor = normalizeHex(document.getElementById("buttonColorInput")?.value, dashboardColor);
     const modeTheme = normalizeModeTheme(document.getElementById("modeThemeSelect")?.value);
 

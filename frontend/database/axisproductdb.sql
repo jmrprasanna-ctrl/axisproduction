@@ -741,18 +741,18 @@ CREATE TABLE IF NOT EXISTS ui_settings (
     id SERIAL PRIMARY KEY,
     app_name VARCHAR(120) NOT NULL DEFAULT 'axis_production',
     footer_text VARCHAR(255) NOT NULL DEFAULT 'Copyright © 2025 Powered by CRONIT SOLLUTIONS, All Right Received.',
-    primary_color VARCHAR(24) NOT NULL DEFAULT '#4b8fbd',
-    accent_color VARCHAR(24) NOT NULL DEFAULT '#58ae86',
+    primary_color VARCHAR(24) NOT NULL DEFAULT '#4f8fb8',
+    accent_color VARCHAR(24) NOT NULL DEFAULT '#8fc7ad',
     "createdAt" TIMESTAMP DEFAULT NOW(),
     "updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
 ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS app_name VARCHAR(120) NOT NULL DEFAULT 'axis_production';
 ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS footer_text VARCHAR(255) NOT NULL DEFAULT 'Copyright © 2025 Powered by CRONIT SOLLUTIONS, All Right Received.';
-ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS primary_color VARCHAR(24) NOT NULL DEFAULT '#4b8fbd';
-ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS accent_color VARCHAR(24) NOT NULL DEFAULT '#58ae86';
-ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS background_color VARCHAR(24) NOT NULL DEFAULT '#eaf2f7';
-ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS button_color VARCHAR(24) NOT NULL DEFAULT '#4b8fbd';
+ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS primary_color VARCHAR(24) NOT NULL DEFAULT '#4f8fb8';
+ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS accent_color VARCHAR(24) NOT NULL DEFAULT '#8fc7ad';
+ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS background_color VARCHAR(24) NOT NULL DEFAULT '#eef1f3';
+ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS button_color VARCHAR(24) NOT NULL DEFAULT '#4f8fb8';
 ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS mode_theme VARCHAR(16) NOT NULL DEFAULT 'light';
 ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS logo_path VARCHAR(500);
 ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS invoice_template_pdf_path VARCHAR(500);
@@ -963,8 +963,8 @@ INSERT INTO ui_settings(app_name, footer_text, primary_color, accent_color)
 SELECT
     'axis_production',
     'Copyright © 2025 Powered by CRONIT SOLLUTIONS, All Right Received.',
-    '#4b8fbd',
-    '#58ae86'
+    '#4f8fb8',
+    '#8fc7ad'
 WHERE NOT EXISTS (SELECT 1 FROM ui_settings);
 
 COMMIT;

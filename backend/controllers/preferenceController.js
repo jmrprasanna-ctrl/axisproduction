@@ -289,9 +289,9 @@ async function getUserPreferenceRow(context, createIfMissing = true) {
       {
         bind: [
           userId,
-          String(base?.primary_color || "#4b8fbd"),
-          String(base?.background_color || "#eaf2f7"),
-          String(base?.button_color || "#4b8fbd"),
+          String(base?.primary_color || "#4f8fb8"),
+          String(base?.background_color || "#eef1f3"),
+          String(base?.button_color || "#4f8fb8"),
           String(base?.mode_theme || "light"),
         ],
       }
@@ -583,10 +583,10 @@ exports.getMyUiSettings = async (req, res) => {
     res.json({
       app_name: base.app_name,
       footer_text: base.footer_text,
-      primary_color: String(userPref?.primary_color || base.primary_color || "#4b8fbd"),
+      primary_color: String(userPref?.primary_color || base.primary_color || "#4f8fb8"),
       accent_color: base.accent_color,
-      background_color: String(userPref?.background_color || base.background_color || "#eaf2f7"),
-      button_color: String(userPref?.button_color || base.button_color || "#4b8fbd"),
+      background_color: String(userPref?.background_color || base.background_color || "#eef1f3"),
+      button_color: String(userPref?.button_color || base.button_color || "#4f8fb8"),
       mode_theme: String(userPref?.mode_theme || base.mode_theme || "light"),
       logo_url: "/api/preferences/logo-file",
       logo_updated_at: logoUpdatedAt ? new Date(logoUpdatedAt).toISOString() : "",
@@ -602,8 +602,8 @@ exports.updateMyTheme = async (req, res) => {
     const target = await resolveTargetPreferenceContext(req, { allowAdminOverride: false });
     await getOrCreateSettings(target.databaseName);
     await getUserPreferenceRow(target, true);
-    const primary = String(req.body?.primary_color || "").trim() || "#4b8fbd";
-    const background = String(req.body?.background_color || "").trim() || "#eaf2f7";
+    const primary = String(req.body?.primary_color || "").trim() || "#4f8fb8";
+    const background = String(req.body?.background_color || "").trim() || "#eef1f3";
     const button = String(req.body?.button_color || "").trim() || primary;
     const rawMode = String(req.body?.mode_theme || "").trim().toLowerCase();
     const mode = rawMode === "dark" || rawMode === "darker" ? rawMode : "light";

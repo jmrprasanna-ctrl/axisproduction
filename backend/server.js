@@ -76,10 +76,10 @@ let appHealth = {
   startedAt: null,
 };
 let businessDatabaseNames = ["axisproductdb", "demo"];
-const DEFAULT_THEME_PRIMARY_COLOR = "#4b8fbd";
-const DEFAULT_THEME_ACCENT_COLOR = "#58ae86";
-const DEFAULT_THEME_BACKGROUND_COLOR = "#eaf2f7";
-const DEFAULT_THEME_BUTTON_COLOR = "#4b8fbd";
+const DEFAULT_THEME_PRIMARY_COLOR = "#4f8fb8";
+const DEFAULT_THEME_ACCENT_COLOR = "#8fc7ad";
+const DEFAULT_THEME_BACKGROUND_COLOR = "#eef1f3";
+const DEFAULT_THEME_BUTTON_COLOR = "#4f8fb8";
 
 function normalizeThemeColor(value) {
   return String(value || "").trim().toLowerCase();
@@ -212,22 +212,22 @@ async function ensureDefaultUiSettings() {
     await db.query(`
       UPDATE ui_settings
       SET primary_color = '${DEFAULT_THEME_PRIMARY_COLOR}'
-      WHERE primary_color IS NULL OR LOWER(TRIM(primary_color)) = '#0f6abf';
+      WHERE primary_color IS NULL OR LOWER(TRIM(primary_color)) IN ('#0f6abf', '#4b8fbd');
     `);
     await db.query(`
       UPDATE ui_settings
       SET accent_color = '${DEFAULT_THEME_ACCENT_COLOR}'
-      WHERE accent_color IS NULL OR LOWER(TRIM(accent_color)) = '#11a36f';
+      WHERE accent_color IS NULL OR LOWER(TRIM(accent_color)) IN ('#11a36f', '#58ae86');
     `);
     await db.query(`
       UPDATE ui_settings
       SET background_color = '${DEFAULT_THEME_BACKGROUND_COLOR}'
-      WHERE background_color IS NULL OR LOWER(TRIM(background_color)) = '#edf3fb';
+      WHERE background_color IS NULL OR LOWER(TRIM(background_color)) IN ('#edf3fb', '#eaf2f7');
     `);
     await db.query(`
       UPDATE ui_settings
       SET button_color = '${DEFAULT_THEME_BUTTON_COLOR}'
-      WHERE button_color IS NULL OR LOWER(TRIM(button_color)) = '#0f6abf';
+      WHERE button_color IS NULL OR LOWER(TRIM(button_color)) IN ('#0f6abf', '#4b8fbd');
     `);
     await db.query(`
       DO $$
@@ -235,15 +235,15 @@ async function ensureDefaultUiSettings() {
         IF to_regclass('public.user_preference_settings') IS NOT NULL THEN
           UPDATE user_preference_settings
           SET primary_color = '${DEFAULT_THEME_PRIMARY_COLOR}'
-          WHERE primary_color IS NULL OR LOWER(TRIM(primary_color)) = '#0f6abf';
+          WHERE primary_color IS NULL OR LOWER(TRIM(primary_color)) IN ('#0f6abf', '#4b8fbd');
 
           UPDATE user_preference_settings
           SET background_color = '${DEFAULT_THEME_BACKGROUND_COLOR}'
-          WHERE background_color IS NULL OR LOWER(TRIM(background_color)) = '#edf3fb';
+          WHERE background_color IS NULL OR LOWER(TRIM(background_color)) IN ('#edf3fb', '#eaf2f7');
 
           UPDATE user_preference_settings
           SET button_color = '${DEFAULT_THEME_BUTTON_COLOR}'
-          WHERE button_color IS NULL OR LOWER(TRIM(button_color)) = '#0f6abf';
+          WHERE button_color IS NULL OR LOWER(TRIM(button_color)) IN ('#0f6abf', '#4b8fbd');
         END IF;
       END $$;
     `);
@@ -275,16 +275,16 @@ async function ensureDefaultUiSettings() {
     if (isLegacyAppName) {
       updates.app_name = "AXIS PRODUCTION";
     }
-    if (!normalizeThemeColor(first.primary_color) || normalizeThemeColor(first.primary_color) === "#0f6abf") {
+    if (!normalizeThemeColor(first.primary_color) || ["#0f6abf", "#4b8fbd"].includes(normalizeThemeColor(first.primary_color))) {
       updates.primary_color = DEFAULT_THEME_PRIMARY_COLOR;
     }
-    if (!normalizeThemeColor(first.accent_color) || normalizeThemeColor(first.accent_color) === "#11a36f") {
+    if (!normalizeThemeColor(first.accent_color) || ["#11a36f", "#58ae86"].includes(normalizeThemeColor(first.accent_color))) {
       updates.accent_color = DEFAULT_THEME_ACCENT_COLOR;
     }
-    if (!normalizeThemeColor(first.background_color) || normalizeThemeColor(first.background_color) === "#edf3fb") {
+    if (!normalizeThemeColor(first.background_color) || ["#edf3fb", "#eaf2f7"].includes(normalizeThemeColor(first.background_color))) {
       updates.background_color = DEFAULT_THEME_BACKGROUND_COLOR;
     }
-    if (!normalizeThemeColor(first.button_color) || normalizeThemeColor(first.button_color) === "#0f6abf") {
+    if (!normalizeThemeColor(first.button_color) || ["#0f6abf", "#4b8fbd"].includes(normalizeThemeColor(first.button_color))) {
       updates.button_color = DEFAULT_THEME_BUTTON_COLOR;
     }
     if (Object.keys(updates).length) {

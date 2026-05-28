@@ -718,7 +718,7 @@ function normalizeHexColor(value, fallback){
 }
 
 function darkenHex(hex, amount){
-    const normalized = normalizeHexColor(hex, "#4b8fbd");
+    const normalized = normalizeHexColor(hex, "#4f8fb8");
     const r = Math.max(0, Math.min(255, parseInt(normalized.slice(1,3), 16) - amount));
     const g = Math.max(0, Math.min(255, parseInt(normalized.slice(3,5), 16) - amount));
     const b = Math.max(0, Math.min(255, parseInt(normalized.slice(5,7), 16) - amount));
@@ -761,7 +761,7 @@ function ensureSidebarLogoFallback(){
 function applyUiSettingsToPage(settings){
     if(!settings) return;
     if(settings.primary_color){
-        const primary = normalizeHexColor(settings.primary_color, "#4b8fbd");
+        const primary = normalizeHexColor(settings.primary_color, "#4f8fb8");
         document.documentElement.style.setProperty("--primary", primary);
         document.documentElement.style.setProperty("--primary-2", darkenHex(primary, 25));
         document.documentElement.style.setProperty("--sidebar-deep", darkenHex(primary, 45));
@@ -770,12 +770,12 @@ function applyUiSettingsToPage(settings){
         document.documentElement.style.setProperty("--accent", String(settings.accent_color));
     }
     if(settings.background_color){
-        const bg = normalizeHexColor(settings.background_color, "#eaf2f7");
+        const bg = normalizeHexColor(settings.background_color, "#eef1f3");
         document.documentElement.style.setProperty("--page-bg", bg);
         document.documentElement.style.setProperty("--page-bg-soft", darkenHex(bg, -12));
     }
     if(settings.button_color){
-        const btn = normalizeHexColor(settings.button_color, "#4b8fbd");
+        const btn = normalizeHexColor(settings.button_color, "#4f8fb8");
         document.documentElement.style.setProperty("--button-color", btn);
         document.documentElement.style.setProperty("--button-color-2", darkenHex(btn, 22));
     }

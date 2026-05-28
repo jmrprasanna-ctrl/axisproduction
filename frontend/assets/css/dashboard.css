@@ -14,9 +14,7 @@ body {
   display: flex;
   flex-direction: column;
   color: #f6fbff;
-  background:
-    radial-gradient(circle at 15% -10%, rgba(255, 255, 255, 0.25) 0%, transparent 35%),
-    linear-gradient(180deg, var(--primary) 0%, var(--primary-2) 62%, var(--sidebar-deep) 100%);
+  background: var(--primary);
   box-shadow: 10px 0 30px rgba(8, 45, 81, 0.24);
 }
 
@@ -28,8 +26,7 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
   position: sticky;
   top: 0;
-  background: rgba(6, 34, 64, 0.24);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.12);
   z-index: 2;
 }
 
@@ -73,7 +70,7 @@ body {
 
 .sidebar .nav-links li a:hover,
 .sidebar .nav-links li a:focus {
-  background: rgba(255, 255, 255, 0.17);
+  background: rgba(255, 255, 255, 0.22);
   transform: translateX(2px);
 }
 
@@ -353,7 +350,8 @@ body {
   place-items: center;
   color: #fff;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+  background: var(--accent);
+  color: #1f4b3a;
 }
 
 .user-meta {
@@ -569,7 +567,7 @@ body {
 .card p {
   font-size: 1.46rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--text);
 }
 
 .dashboard-card-link-enabled {
@@ -638,7 +636,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px;
-  background: linear-gradient(180deg, #f8fbfa 0%, #f0f6f3 100%);
+  background: #f7f9f8;
 }
 
 .todo-main {

@@ -1,21 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --bg: #eaf2f7;
-  --bg-soft: #e2ede8;
+  --bg: #eef1f3;
+  --bg-soft: #eef1f3;
   --page-bg: var(--bg);
   --page-bg-soft: var(--bg-soft);
   --surface: #ffffff;
-  --surface-2: #f4f8f7;
-  --text: #1a3245;
-  --muted: #617785;
-  --line: #cfdde3;
-  --primary: #4b8fbd;
-  --primary-2: #3d759d;
-  --button-color: #4b8fbd;
-  --button-color-2: #3d759d;
-  --sidebar-deep: #335c76;
-  --accent: #58ae86;
+  --surface-2: #f5f7f8;
+  --text: #2f3b45;
+  --muted: #657480;
+  --line: #d4dde2;
+  --primary: #4f8fb8;
+  --primary-2: #4f8fb8;
+  --button-color: #4f8fb8;
+  --button-color-2: #4f8fb8;
+  --sidebar-deep: #4f8fb8;
+  --accent: #8fc7ad;
   --danger: #d64545;
   --warning: #f59e0b;
   --radius-sm: 10px;
@@ -23,7 +23,7 @@
   --radius-lg: 22px;
   --shadow-sm: 0 8px 20px rgba(15, 52, 88, 0.08);
   --shadow-md: 0 18px 38px rgba(15, 52, 88, 0.12);
-  --ring: rgba(75, 143, 189, 0.2);
+  --ring: rgba(79, 143, 184, 0.24);
 }
 
 * {
@@ -39,10 +39,7 @@ body {
   margin: 0;
   font-family: 'Outfit', 'Segoe UI', Tahoma, sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at 8% -10%, #cfe2f0 0%, transparent 35%),
-    radial-gradient(circle at 95% 110%, #d8e9df 0%, transparent 28%),
-    linear-gradient(180deg, var(--page-bg) 0%, var(--page-bg-soft) 100%);
+  background: var(--page-bg);
   line-height: 1.45;
   padding-bottom: 56px;
   overflow-x: hidden;
@@ -91,7 +88,7 @@ p {
 .chart-container,
 .login-container,
 .todo-section {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
+  background: #ffffff;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -166,7 +163,7 @@ button,
   min-height: 42px;
   padding: 0 18px;
   margin-top: 12px;
-  background: linear-gradient(135deg, var(--button-color) 0%, var(--button-color-2) 100%);
+  background: var(--button-color);
   color: #fff;
   font-weight: 700;
   font-size: 0.92rem;
@@ -193,19 +190,20 @@ button:active,
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #159265 0%, #0f7752 100%);
+  background: var(--accent);
+  color: #234638;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--button-color) 0%, var(--button-color-2) 100%);
+  background: var(--button-color);
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #e04a4a 0%, #bc3434 100%);
+  background: #d64545;
 }
 
 .btn-warning {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: #e9a93c;
 }
 
 .btn-secondary {
@@ -232,7 +230,7 @@ table {
 }
 
 thead {
-  background: linear-gradient(180deg, #e8f1f5 0%, #dfe9ee 100%);
+  background: #e8edf0;
 }
 
 th,
@@ -250,11 +248,11 @@ th {
 }
 
 tbody tr:nth-child(even) {
-  background: #fbfcfc;
+  background: #f8fafb;
 }
 
 tbody tr:hover {
-  background: #f1f6f4;
+  background: #f1f5f3;
 }
 
 .login-container {
