@@ -443,6 +443,7 @@ CREATE TABLE IF NOT EXISTS products (
     model VARCHAR(100),
     serial_no VARCHAR(100),
     count INT DEFAULT 0,
+    measurement VARCHAR(20),
     selling_price DOUBLE PRECISION DEFAULT 0,
     dealer_price DOUBLE PRECISION DEFAULT 0,
     vendor_id INT,
@@ -453,6 +454,7 @@ CREATE TABLE IF NOT EXISTS products (
 ALTER TABLE products ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW();
 ALTER TABLE products ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW();
 ALTER TABLE products ADD COLUMN IF NOT EXISTS row_type VARCHAR(30) DEFAULT 'Other';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS measurement VARCHAR(20);
 UPDATE products p
 SET row_type = CASE
     WHEN LOWER(COALESCE(c.name, '')) IN ('consumable', 'accessory') OR LOWER(COALESCE(c.name, '')) LIKE '%spare%' THEN 'Metirial'

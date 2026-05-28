@@ -12,6 +12,7 @@ const Product = db.define("Product", {
     model: { type: DataTypes.STRING },
     serial_no: { type: DataTypes.STRING },
     count: { type: DataTypes.INTEGER, defaultValue:0 },
+    measurement: { type: DataTypes.STRING(20), allowNull: true },
     selling_price: { type: DataTypes.FLOAT },
     dealer_price: { type: DataTypes.FLOAT },
     vendor_id: { type: DataTypes.INTEGER, references:{ model:Vendor, key:"id" } },
@@ -24,6 +25,7 @@ const Product = db.define("Product", {
         { fields: ["product_id"] },
         { fields: ["description"] },
         { fields: ["row_type"] },
+        { fields: ["measurement"] },
         { fields: ["model"] },
         { fields: ["category_id"] },
         { fields: ["vendor_id"] }

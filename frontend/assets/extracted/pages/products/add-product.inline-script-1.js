@@ -11,6 +11,17 @@ const rowPrefix = {
 
 let allVendors = [];
 
+const measurementMap = {
+    mg: "Mg",
+    grm: "Grm",
+    kg: "Kg",
+    ml: "Ml",
+    ltr: "Ltr",
+    mm: "MM",
+    cm: "CM",
+    mtr: "Mtr"
+};
+
 function normalizeRowType(value){
     const token = String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
     if(token === "metirial" || token === "material") return "Metirial";
@@ -22,6 +33,11 @@ function normalizeRowType(value){
 function resolveRowPrefix(rowType){
     const key = String(rowType || "").trim().toLowerCase().replace(/\s+/g, " ");
     return rowPrefix[key] || "OT";
+}
+
+function normalizeMeasurement(value){
+    const token = String(value || "").trim().toLowerCase();
+    return measurementMap[token] || "";
 }
 
 function renderVendors(){
@@ -102,6 +118,8 @@ document.getElementById("productForm").addEventListener("submit", async function
     const rowType = normalizeRowType(document.getElementById("rowType").value);
     const vendorId = Number(document.getElementById("vendor").value || 0);
     const dealerPrice = Number(document.getElementById("dealerPrice").value || 0);
+    const measurement = normalizeMeasurement(document.getElementById("measurement").value);
+    const qty = Number(document.getElementById("qty").value || 0);
 
     const data = {
         row_type: rowType,
@@ -109,19 +127,24 @@ document.getElementById("productForm").addEventListener("submit", async function
         description: String(document.getElementById("description").value || "").trim(),
         dealer_price: dealerPrice,
         vendor_id: vendorId,
+        measurement,
         category: "",
         model: "",
         serial_no: "",
-        count: 0,
+        count: qty,
         selling_price: 0
     };
 
-    if(!data.row_type || !data.product_id || !data.description || !Number.isFinite(vendorId) || vendorId <= 0){
+    if(!data.row_type || !data.product_id || !data.description || !data.measurement || !Number.isFinite(vendorId) || vendorId <= 0){
         alert("Please fill required fields.");
         return;
     }
     if(!Number.isFinite(dealerPrice) || dealerPrice < 0){
         alert("Dealer price must be 0 or greater.");
+        return;
+    }
+    if(!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)){
+        alert("QTY must be a whole number (0 or greater).");
         return;
     }
 

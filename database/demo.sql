@@ -97,6 +97,7 @@ CREATE TABLE products (
     model VARCHAR(50),
     serial_no VARCHAR(50),
     count INT DEFAULT 0,
+    measurement VARCHAR(20),
     selling_price FLOAT,
     dealer_price FLOAT,
     vendor_id INT REFERENCES vendors(id),

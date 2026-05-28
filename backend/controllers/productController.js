@@ -9,8 +9,19 @@ const toNum = (value, fallback = 0) => {
     const n = Number(value);
     return Number.isFinite(n) ? n : fallback;
 };
+const hasValue = (value) => value !== undefined && value !== null && String(value).trim() !== "";
 
 const cleanUpper = (value) => String(value || "").trim().toUpperCase();
+const measurementMap = {
+    mg: "Mg",
+    grm: "Grm",
+    kg: "Kg",
+    ml: "Ml",
+    ltr: "Ltr",
+    mm: "MM",
+    cm: "CM",
+    mtr: "Mtr"
+};
 
 const normalizeRowType = (value, fallback = "") => {
     const token = String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -30,6 +41,14 @@ const resolveLegacyRowType = (categoryValue) => {
         return "Other";
     }
     return "Finish Good";
+};
+
+const normalizeMeasurement = (value, fallback = null) => {
+    const token = String(value || "").trim().toLowerCase();
+    if(!token){
+        return fallback;
+    }
+    return measurementMap[token] || fallback;
 };
 
 exports.getProducts = async (req,res)=>{
@@ -64,7 +83,7 @@ exports.searchProducts = async (req,res)=>{
 
         const rows = await Product.findAll({
             where,
-            attributes: ["id","product_id","description","row_type","model","selling_price","count"],
+            attributes: ["id","product_id","description","row_type","model","selling_price","count","measurement"],
             include: [{ model: Vendor, attributes: ["id", "name"] }],
             order: [["product_id","ASC"]],
             limit: Math.max(limit, 50)
@@ -106,6 +125,7 @@ exports.searchProducts = async (req,res)=>{
                     model: plain.model,
                     selling_price: plain.selling_price,
                     count: plain.count,
+                    measurement: plain.measurement || null,
                     vendor_id: plain.Vendor ? plain.Vendor.id : null,
                     vendor_name: plain.Vendor ? plain.Vendor.name : ""
                 };
@@ -136,6 +156,7 @@ exports.createProduct = async (req,res)=>{
             model,
             serial_no,
             count,
+            measurement,
             selling_price,
             dealer_price,
             vendor_id
@@ -146,8 +167,11 @@ exports.createProduct = async (req,res)=>{
         category = typeof category === "string" ? category.trim() : "";
         const parsedVendorId = Number(vendor_id);
         const parsedCount = toNum(count, 0);
+        const countProvided = hasValue(count);
         const parsedSelling = toNum(selling_price, 0);
         const parsedDealer = toNum(dealer_price, 0);
+        const measurementProvided = hasValue(measurement);
+        const normalizedMeasurement = normalizeMeasurement(measurement, null);
 
         product_id = String(product_id || "").trim();
         description = cleanUpper(description);
@@ -159,6 +183,12 @@ exports.createProduct = async (req,res)=>{
         }
         if(parsedCount < 0 || parsedSelling < 0 || parsedDealer < 0){
             return res.status(400).json({ message: "Count and prices cannot be negative." });
+        }
+        if(countProvided && !Number.isInteger(parsedCount)){
+            return res.status(400).json({ message: "Count must be a whole number." });
+        }
+        if(measurementProvided && !normalizedMeasurement){
+            return res.status(400).json({ message: "Invalid measurement value." });
         }
 
         let categoryRecord = null;
@@ -181,6 +211,7 @@ exports.createProduct = async (req,res)=>{
             model: model || null,
             serial_no: serial_no || null,
             count: parsedCount,
+            measurement: normalizedMeasurement,
             selling_price: parsedSelling,
             dealer_price: parsedDealer,
             vendor_id: parsedVendorId
@@ -233,6 +264,7 @@ exports.updateProduct = async (req,res)=>{
             model,
             serial_no,
             count,
+            measurement,
             selling_price,
             dealer_price,
             vendor_id
@@ -251,9 +283,14 @@ exports.updateProduct = async (req,res)=>{
         const parsedVendorId = Number.isFinite(vendorCandidate) && vendorCandidate > 0
             ? vendorCandidate
             : Number(product.vendor_id);
-        const parsedCount = toNum(count, Number(product.count || 0));
+        const countProvided = hasValue(count);
+        const parsedCount = countProvided
+            ? toNum(count, Number(product.count || 0))
+            : Number(product.count || 0);
         const parsedSelling = toNum(selling_price, Number(product.selling_price || 0));
         const parsedDealer = toNum(dealer_price, Number(product.dealer_price || 0));
+        const measurementProvided = hasValue(measurement);
+        const normalizedMeasurement = normalizeMeasurement(measurement, product.measurement || null);
 
         product_id = String(product_id || product.product_id || "").trim();
         description = cleanUpper(description || product.description);
@@ -265,6 +302,12 @@ exports.updateProduct = async (req,res)=>{
         }
         if(parsedCount < 0 || parsedSelling < 0 || parsedDealer < 0){
             return res.status(400).json({ message: "Count and prices cannot be negative." });
+        }
+        if(countProvided && !Number.isInteger(parsedCount)){
+            return res.status(400).json({ message: "Count must be a whole number." });
+        }
+        if(measurementProvided && !normalizeMeasurement(measurement, null)){
+            return res.status(400).json({ message: "Invalid measurement value." });
         }
 
         let categoryRecord = null;
@@ -289,6 +332,7 @@ exports.updateProduct = async (req,res)=>{
             model: model || product.model || null,
             serial_no: serial_no || null,
             count: parsedCount,
+            measurement: normalizedMeasurement,
             selling_price: parsedSelling,
             dealer_price: parsedDealer,
             vendor_id: parsedVendorId

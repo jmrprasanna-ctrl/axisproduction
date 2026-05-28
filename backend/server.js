@@ -875,6 +875,11 @@ async function ensureProductRowSchema() {
     `);
 
     await db.query(`
+      ALTER TABLE products
+      ADD COLUMN IF NOT EXISTS measurement VARCHAR(20);
+    `);
+
+    await db.query(`
       UPDATE products p
       SET row_type = CASE
         WHEN LOWER(COALESCE(c.name, '')) IN ('consumable', 'accessory') OR LOWER(COALESCE(c.name, '')) LIKE '%spare%' THEN 'Metirial'
