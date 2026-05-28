@@ -17,7 +17,6 @@ router.get("/seal1-image", authMiddleware, roleMiddleware(["admin","manager","us
 router.get("/seal-q2-image", authMiddleware, roleMiddleware(["admin","manager","user"]), invoiceController.getSealQ2Image);
 router.get("/seal-q3-image", authMiddleware, roleMiddleware(["admin","manager","user"]), invoiceController.getSealQ3Image);
 router.get("/sealv-image", authMiddleware, roleMiddleware(["admin","manager","user"]), invoiceController.getSealVImage);
-router.get("/warranty-invoices", authMiddleware, roleMiddleware(["admin","manager","user"]), invoiceController.listWarrantyInvoices);
 router.get("/", authMiddleware, roleMiddleware(["admin","manager","user"]), invoiceController.listInvoices);
 router.get("/:id", authMiddleware, roleMiddleware(["admin","manager","user"]), invoiceController.getInvoice);
 router.put("/:id/payment", authMiddleware, roleMiddleware(["admin","manager","user"]), invoiceController.updateInvoicePayment);

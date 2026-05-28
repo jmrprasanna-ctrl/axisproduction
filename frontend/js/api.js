@@ -266,9 +266,8 @@ function applyUserNavRestrictions(){
         if(!normalized.startsWith("/")) normalized = "/" + normalized;
         const isAllowed = allowed.some(suffix => normalized.endsWith(suffix));
         const financeAliasAllowed = normalized.endsWith("/finance.html") && hasUserGrantedPath("/finance/finance.html");
-        const supportAliasAllowed = normalized.endsWith("/support.html") && hasUserGrantedPath("/support/support.html");
         const stockAliasAllowed = normalized.endsWith("/stock.html") && hasUserGrantedPath("/stock/stock.html");
-        const allowThisLink = isAllowed || financeAliasAllowed || supportAliasAllowed || stockAliasAllowed;
+        const allowThisLink = isAllowed || financeAliasAllowed || stockAliasAllowed;
         if(!allowThisLink){
             const li = a.closest("li");
             if(li){
@@ -321,16 +320,6 @@ function getFinanceLink(fileName){
     return `${prefix}finance/${fileName}`;
 }
 
-function getSupportLink(fileName){
-    const path = window.location.pathname.replace(/\\/g, "/");
-    const idx = path.lastIndexOf("/pages/");
-    if(idx === -1) return `/support/${fileName}`;
-    const rest = path.slice(idx + 7);
-    const depth = Math.max(0, rest.split("/").length - 1);
-    const prefix = depth === 0 ? "" : "../".repeat(depth);
-    return `${prefix}support/${fileName}`;
-}
-
 function getStockLink(fileName){
     const path = window.location.pathname.replace(/\\/g, "/");
     const idx = path.lastIndexOf("/pages/");
@@ -367,8 +356,7 @@ function renderSidebarMenuByAccess(){
             children: [
                 { path: "/products/product-list.html", label: "Products" },
                 { path: "/customers/customer-list.html", label: "Customers" },
-                { path: "/vendors/list-vendor.html", label: "Vendors" },
-                { path: "/users/technician-list.html", label: "Support Technician" }
+                { path: "/vendors/list-vendor.html", label: "Vendors" }
             ]
         },
         {
@@ -398,11 +386,9 @@ function renderSidebarMenuByAccess(){
                 { path: "/finance/finance.html", label: "Finance" },
                 { path: "/finance/payments.html", label: "Payments" },
                 { path: "/finance/pendings.html", label: "Pendings" },
-                { path: "/finance/sup-tech-pay.html", label: "Sup.Tech Pay" },
-                { path: "/support/warrenty.html", label: "Warrenty" }
+                { path: "/finance/sup-tech-pay.html", label: "Sup.Tech Pay" }
             ]
         },
-        { path: "/support/support.html", label: "Support" },
         { path: "/stock/stock.html", label: "Stock" },
         {
             path: "/hr/inout.html",
@@ -1008,8 +994,6 @@ async function loadUserAccessPermissions(){
         const dynamicPages = Array.from(new Set([
             ...normalizedAllowedPages,
             ...pagesFromActions,
-            ...(normalizedActionKeys.includes("/users/technician-list.html::add") ? ["/users/add-technician.html"] : []),
-            ...(normalizedActionKeys.includes("/users/technician-list.html::edit") ? ["/users/edit-technician.html"] : []),
             ...(normalizedActionKeys.includes("/users/profile-list.html::edit") ? ["/users/edit-profile.html"] : []),
             ...(
                 normalizedAllowedPages.includes("/products/add-rental-consumable.html")

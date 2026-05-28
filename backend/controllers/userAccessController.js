@@ -196,10 +196,6 @@ const ACCESS_MODULE_OPTIONS = [
     items: [
       { path: "/messages/messages.html", label: "Messages", actions: ["view", "add", "delete"] },
       { path: "/notifications/notifications.html", label: "Notifications", actions: ["view"] },
-      { path: "/support/support.html", label: "Support", actions: ["view", "add", "edit", "delete"] },
-      { path: "/support/warrenty.html", label: "Warrenty", actions: ["view"] },
-      { path: "/support/warranty-invoice-view.html", label: "Warranty Invoice View", actions: ["view"] },
-      { path: "/users/technician-list.html", label: "Support Technician", actions: ["view", "add", "edit", "delete"] },
     ],
   },
   {
@@ -270,7 +266,6 @@ function normalizePages(rawPages) {
     new Set(
       list
         .map((p) => String(p || "").trim())
-        .map((p) => (p.toLowerCase() === "/support/warrenty-invoice-view.html" ? "/support/warranty-invoice-view.html" : p))
         .filter(Boolean)
         .filter((p) => !EXCLUDED_PAGES.has(p.toLowerCase()))
         .filter((p) => ACCESS_PATH_SET.has(p.toLowerCase()))
@@ -284,7 +279,6 @@ function normalizeActions(rawActions) {
     new Set(
       list
         .map((x) => String(x || "").trim().toLowerCase())
-        .map((x) => x.replace("/support/warrenty-invoice-view.html::", "/support/warranty-invoice-view.html::"))
         .filter(Boolean)
         .filter((x) => ACCESS_ACTION_SET.has(x))
     )
@@ -333,10 +327,6 @@ function expandImplicitActionDependencies(actionKeys) {
     add("/expenses/edit-expense.html", "view");
     add("/expenses/edit-expense.html", "edit");
   }
-  if (set.has(toActionKey("/users/technician-list.html", "edit"))) {
-    add("/users/edit-technician.html", "view");
-    add("/users/edit-technician.html", "edit");
-  }
   if (set.has(toActionKey("/users/profile-list.html", "edit"))) {
     add("/users/edit-profile.html", "view");
     add("/users/edit-profile.html", "edit");
@@ -352,18 +342,6 @@ function expandImplicitActionDependencies(actionKeys) {
     add("/hr/payslip-view.html", "view");
     add("/hr/payslip.html", "view");
   }
-  if (set.has(toActionKey("/users/technician-list.html", "add"))) {
-    add("/users/add-technician.html", "view");
-    add("/users/add-technician.html", "add");
-  }
-  if (
-    set.has(toActionKey("/users/technician-list.html", "add")) ||
-    set.has(toActionKey("/users/technician-list.html", "edit")) ||
-    set.has(toActionKey("/users/technician-list.html", "delete"))
-  ) {
-    add("/users/technician-list.html", "view");
-  }
-
   return normalizeActions(Array.from(set));
 }
 

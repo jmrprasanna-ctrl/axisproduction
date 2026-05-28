@@ -73,12 +73,7 @@ function renderSupportImportantOptions(){
 }
 
 async function loadSupportImportantLibrary(){
-    try{
-        const rows = await request("/support-importants","GET");
-        supportImportantLibrary = Array.isArray(rows) ? rows : [];
-    }catch(_err){
-        supportImportantLibrary = [];
-    }
+    supportImportantLibrary = [];
     renderSupportImportantOptions();
 }
 

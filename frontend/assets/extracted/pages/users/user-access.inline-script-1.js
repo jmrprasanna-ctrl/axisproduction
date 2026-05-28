@@ -154,11 +154,6 @@ const userSelectEl = document.getElementById("userSelect");
                     label: "Edit Added Consumables",
                     actions: ["view"]
                 });
-                ensureMatrixItem("Finance", {
-                    path: "/support/warranty-invoice-view.html",
-                    label: "Warranty Invoice View",
-                    actions: ["view"]
-                });
 
                 renderAccessMatrix();
             }catch(err){
@@ -216,15 +211,10 @@ const userSelectEl = document.getElementById("userSelect");
                 const res = await request(`/users/access/${encodeURIComponent(selectedRef)}`, "GET");
                 const actions = Array.isArray(res.allowed_actions) ? res.allowed_actions : [];
                 const pages = Array.isArray(res.allowed_pages) ? res.allowed_pages : [];
-                const warrantyCanonical = "/support/warranty-invoice-view.html";
-                const warrantyLegacy = "/support/warrenty-invoice-view.html";
-                const normalizedPages = pages.map((p) => String(p || "").trim().toLowerCase()).filter(Boolean);
-                const mergedPages = new Set(normalizedPages);
-                if(mergedPages.has(warrantyCanonical) || mergedPages.has(warrantyLegacy)){
-                    mergedPages.add(warrantyCanonical);
-                    mergedPages.add(warrantyLegacy);
-                }
-                const pageViewActions = Array.from(mergedPages).map((path) => `${path}::view`);
+                const pageViewActions = pages
+                    .map((p) => String(p || "").trim().toLowerCase())
+                    .filter(Boolean)
+                    .map((path) => `${path}::view`);
                 setCheckedActions([...actions, ...pageViewActions]);
                 superUserCheckboxEl.checked = !!res.super_user;
                 superUserCheckboxEl.disabled = res.can_edit_super_user === false;
@@ -246,9 +236,6 @@ const userSelectEl = document.getElementById("userSelect");
                 return;
             }
 
-            const warrantyCanonical = "/support/warranty-invoice-view.html";
-            const warrantyLegacy = "/support/warrenty-invoice-view.html";
-
             const allowedActionsSet = new Set(getSelectedActionValues().map((x) => String(x || "").trim().toLowerCase()).filter(Boolean));
             Array.from(allowedActionsSet).forEach((key) => {
                 const idx = key.lastIndexOf("::");
@@ -258,20 +245,12 @@ const userSelectEl = document.getElementById("userSelect");
                 if(!path || !action || action === "view") return;
                 allowedActionsSet.add(`${path}::view`);
             });
-            if(allowedActionsSet.has(`${warrantyCanonical}::view`) || allowedActionsSet.has(`${warrantyLegacy}::view`)){
-                allowedActionsSet.add(`${warrantyCanonical}::view`);
-                allowedActionsSet.add(`${warrantyLegacy}::view`);
-            }
             const allowedActions = Array.from(allowedActionsSet);
             const allowedPagesSet = new Set(
                 allowedActions
                     .filter((k) => String(k).toLowerCase().endsWith("::view"))
                     .map((k) => k.slice(0, k.lastIndexOf("::")))
             );
-            if(allowedPagesSet.has(warrantyCanonical) || allowedPagesSet.has(warrantyLegacy)){
-                allowedPagesSet.add(warrantyCanonical);
-                allowedPagesSet.add(warrantyLegacy);
-            }
             const allowedPages = Array.from(allowedPagesSet);
 
             const payload = {

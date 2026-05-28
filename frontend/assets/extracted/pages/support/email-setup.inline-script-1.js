@@ -303,7 +303,7 @@ async function loadSetup(mappedDatabaseName) {
 window.addEventListener("DOMContentLoaded", () => {
     if (!canManageEmailSetup()) {
         alert("Access denied.");
-        window.location.href = "support.html";
+        window.location.href = "../dashboard.html";
         return;
     }
 

@@ -26,7 +26,6 @@ const GeneralMachine = require("./models/GeneralMachine");
 const RentalMachineConsumable = require("./models/RentalMachineConsumable");
 const RentalMachineCount = require("./models/RentalMachineCount");
 const Technician = require("./models/Technician");
-const SupportImportant = require("./models/SupportImportant");
 const SupportTechPay = require("./models/SupportTechPay");
 const ServiceRecord = require("./models/ServiceRecord");
 const CategoryModelOption = require("./models/CategoryModelOption");
@@ -54,8 +53,6 @@ const rentalMachineRoutes = require("./routes/rentalMachineRoutes");
 const generalMachineRoutes = require("./routes/generalMachineRoutes");
 const rentalMachineConsumableRoutes = require("./routes/rentalMachineConsumableRoutes");
 const rentalMachineCountRoutes = require("./routes/rentalMachineCountRoutes");
-const technicianRoutes = require("./routes/technicianRoutes");
-const supportImportantRoutes = require("./routes/supportImportantRoutes");
 const supportTechPayRoutes = require("./routes/supportTechPayRoutes");
 const serviceRecordRoutes = require("./routes/serviceRecordRoutes");
 const categoryModelOptionRoutes = require("./routes/categoryModelOptionRoutes");
@@ -664,21 +661,6 @@ async function ensureInvoicePaymentSchema() {
       UPDATE invoices
       SET payment_date = COALESCE(payment_date, invoice_date, DATE("updatedAt"), DATE("createdAt"), CURRENT_DATE)
       WHERE payment_status = 'Received' AND payment_date IS NULL;
-    `);
-  });
-}
-
-async function ensureSupportImportantSchema() {
-  await runOnBusinessDatabases(async () => {
-    await db.query(`
-      ALTER TABLE support_importants
-      ADD COLUMN IF NOT EXISTS warranty_period VARCHAR(20) DEFAULT '3 month';
-    `);
-
-    await db.query(`
-      UPDATE support_importants
-      SET warranty_period = '3 month'
-      WHERE warranty_period IS NULL OR TRIM(warranty_period) = '';
     `);
   });
 }
@@ -1394,8 +1376,6 @@ app.use("/api/rental-machines", rentalMachineRoutes);
 app.use("/api/general-machines", generalMachineRoutes);
 app.use("/api/rental-machine-consumables", rentalMachineConsumableRoutes);
 app.use("/api/rental-machine-counts", rentalMachineCountRoutes);
-app.use("/api/technicians", technicianRoutes);
-app.use("/api/support-importants", supportImportantRoutes);
 app.use("/api/support-tech-pay", supportTechPayRoutes);
 app.use("/api/services", serviceRecordRoutes);
 app.use("/api/category-model-options", categoryModelOptionRoutes);
@@ -1461,7 +1441,6 @@ async function startServer() {
     await ensureInvoiceDateSchema();
     await ensureInvoiceNumberingSchema();
     await ensureInvoicePaymentSchema();
-    await ensureSupportImportantSchema();
     await ensureSupportTechPaySchema();
     await ensureServiceRecordSchema();
     await ensureInvoiceImportantWarrantySchema();

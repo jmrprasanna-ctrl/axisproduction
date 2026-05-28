@@ -182,7 +182,7 @@ function bindDashboardTileAccessLinks(){
         { id: "rentalMachinesCountsPrice", permissionPath: "/dashboard/tiles/rental-machines-counts", paths: ["/products/add-rental-count.html"] },
         { id: "rentalConsumablesPrice", permissionPath: "/dashboard/tiles/rental-consumables", paths: ["/products/add-rental-consumable.html"] },
         { id: "totalExpenses", permissionPath: "/dashboard/tiles/total-expenses", paths: ["/expenses/expense-list.html"] },
-        { id: "technicianPaid", permissionPath: "/dashboard/tiles/support-technician-pay", paths: ["/users/technician-list.html", "/finance/finance.html"] },
+        { id: "technicianPaid", permissionPath: "/dashboard/tiles/support-technician-pay", paths: ["/finance/finance.html"] },
         { id: "vendorPaid", permissionPath: "/dashboard/tiles/vendor-paid", paths: ["/finance/payments.html", "/finance/finance.html"] },
         { id: "netProfit", permissionPath: "/dashboard/tiles/net-profit", paths: ["/finance/finance.html"] }
     ];
@@ -297,8 +297,7 @@ const DASHBOARD_MENU_ENTRIES = [
         children: [
             { path: "/products/product-list.html", label: "Products" },
             { path: "/customers/customer-list.html", label: "Customers" },
-            { path: "/vendors/list-vendor.html", label: "Vendors" },
-            { path: "/users/technician-list.html", label: "Support Technician" }
+            { path: "/vendors/list-vendor.html", label: "Vendors" }
         ]
     },
     {
@@ -328,11 +327,9 @@ const DASHBOARD_MENU_ENTRIES = [
             { path: "/finance/finance.html", label: "Finance" },
             { path: "/finance/payments.html", label: "Payments" },
             { path: "/finance/pendings.html", label: "Pendings" },
-            { path: "/finance/sup-tech-pay.html", label: "Sup.Tech Pay" },
-            { path: "/support/warrenty.html", label: "Warrenty" }
+            { path: "/finance/sup-tech-pay.html", label: "Sup.Tech Pay" }
         ]
     },
-    { path: "/support/support.html", label: "Support" },
     { path: "/stock/stock.html", label: "Stock" },
     {
         path: "/hr/inout.html",
