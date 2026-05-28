@@ -14,9 +14,6 @@ const loadInvoices = async () => {
             <td>${new Date(inv.invoice_date).toLocaleDateString()}</td>
             <td>
                 <button class="btn btn-success" onclick="viewInvoice(${inv.id})">INV 1</button>
-                <button class="btn btn-primary btn-inline" onclick="viewQuatation(${inv.id})">QUT 1</button>
-                <button class="btn btn-primary btn-inline" onclick="viewQuatation2(${inv.id})">QUT 2</button>
-                <button class="btn btn-primary btn-inline" onclick="viewQuatation3(${inv.id})">QUT 3</button>
                 <button class="btn btn-danger" onclick="deleteInvoice(${inv.id})">Delete</button>
             </td>
         `;
@@ -40,21 +37,3 @@ const viewInvoice = (id) => {
 };
 
 window.viewInvoice = viewInvoice;
-
-const viewQuatation = (id) => {
-    window.location.href = `view-quotation.html?id=${id}`;
-};
-
-window.viewQuatation = viewQuatation;
-
-const viewQuatation2 = (id) => {
-    window.location.href = `view-quotation-2.html?id=${id}`;
-};
-
-window.viewQuatation2 = viewQuatation2;
-
-const viewQuatation3 = (id) => {
-    window.location.href = `view-quotation-3.html?id=${id}`;
-};
-
-window.viewQuatation3 = viewQuatation3;

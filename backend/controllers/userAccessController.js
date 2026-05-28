@@ -108,9 +108,6 @@ const ACCESS_MODULE_OPTIONS = [
       { path: "/products/product-list.html", label: "Products List", actions: ["view", "add", "edit", "delete"] },
       { path: "/products/add-product.html", label: "Add Product", actions: ["view", "add"] },
       { path: "/products/edit-product.html", label: "Edit Product", actions: ["view", "edit"] },
-      { path: "/products/add-rental-count.html", label: "Rental Count", actions: ["view", "add", "edit", "delete"] },
-      { path: "/products/add-rental-consumable.html", label: "Rental Consumables", actions: ["view", "add", "edit", "delete"] },
-      { path: "/products/edit-added-consumable.html", label: "Edit Added Consumables", actions: ["view"] },
     ],
   },
   {
@@ -143,9 +140,6 @@ const ACCESS_MODULE_OPTIONS = [
       { path: "/invoices/invoice-list.html", label: "Invoice List", actions: ["view", "add", "edit", "delete"] },
       { path: "/invoices/create-invoice.html", label: "Create Invoice", actions: ["view", "add", "edit"] },
       { path: "/invoices/view-invoice.html", label: "View Invoice", actions: ["view"] },
-      { path: "/invoices/view-quotation.html", label: "View Quotation", actions: ["view"] },
-      { path: "/invoices/view-quotation-2.html", label: "View Quotation 2", actions: ["view"] },
-      { path: "/invoices/view-quotation-3.html", label: "View Quotation 3", actions: ["view"] },
     ],
   },
   {
@@ -292,9 +286,6 @@ function expandImplicitActionDependencies(actionKeys) {
   if (set.has(toActionKey("/products/product-list.html", "edit"))) {
     add("/products/edit-product.html", "view");
     add("/products/edit-product.html", "edit");
-  }
-  if (set.has(toActionKey("/products/add-rental-consumable.html", "edit"))) {
-    add("/products/edit-added-consumable.html", "view");
   }
   if (set.has(toActionKey("/customers/customer-list.html", "edit"))) {
     add("/customers/edit-customer.html", "view");

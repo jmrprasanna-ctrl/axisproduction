@@ -1316,98 +1316,21 @@ async function emailQuotation(){
 }
 
 async function emailQuotations(){
-    if(!latestInvoiceData){
-        alert("Invoice details are not ready yet.");
-        return;
-    }
-    const invoiceId = new URLSearchParams(window.location.search).get("id");
-    if(!invoiceId){
-        alert("Invoice id is missing.");
-        return;
-    }
-    try{
-        const attachments = [];
-        const defs = [
-            {
-                feature: "quotation2",
-                page: "view-quotation-2.html",
-                buildFnName: "buildQuotation2RenderedPdf"
-            },
-            {
-                feature: "quotation3",
-                page: "view-quotation-3.html",
-                buildFnName: "buildQuotation3RenderedPdf"
-            }
-        ];
-        for(const def of defs){
-            if(!hasMappedFeature(def.feature)) continue;
-            const rendered = await buildRenderedPdfFromQuotationPage(invoiceId, def.page, def.buildFnName);
-            const dataUrl = await blobToDataUrl(rendered.pdfBlob);
-            attachments.push({
-                attachment_pdf_base64: dataUrl,
-                attachment_file_name: rendered.fileName
-            });
-        }
-        if(!attachments.length){
-            alert("No Quotation functions are mapped for this user/database.");
-            return;
-        }
-        const res = await request(`/invoices/${invoiceId}/send-email`, "POST", {
-            attachment_list: attachments,
-            email_type: "quotation23",
-            require_rendered_attachment: true
-        });
-        if(typeof showMessageBox === "function"){
-            showMessageBox(res.message || "Quotation 2/3 email sent");
-        }else{
-            alert(res.message || "Quotation 2/3 email sent");
-        }
-    }catch(err){
-        alert(err.message || "Failed to send Quotation 2/3 email");
-    }
+    alert("Quotation view pages have been removed from this system.");
 }
 
 function openQuotationPage(version){
-    const invoiceId = new URLSearchParams(window.location.search).get("id");
-    if(!invoiceId){
-        alert("Invoice id is missing.");
-        return;
-    }
-    const canOpenPath = (path) => {
-        if(typeof hasUserGrantedPath !== "function") return true;
-        return hasUserGrantedPath(path);
-    };
-    if(Number(version) === 2){
-        if(!canOpenPath("/invoices/view-quotation-2.html")){
-            alert("You do not have access to QUT2.");
-            return;
-        }
-        window.location.href = `view-quotation-2.html?id=${invoiceId}`;
-        return;
-    }
-    if(Number(version) === 3){
-        if(!canOpenPath("/invoices/view-quotation-3.html")){
-            alert("You do not have access to QUT3.");
-            return;
-        }
-        window.location.href = `view-quotation-3.html?id=${invoiceId}`;
-        return;
-    }
-    window.location.href = `view-quotation.html?id=${invoiceId}`;
+    alert("Quotation view pages have been removed from this system.");
 }
 
 function applyQuotationButtonAccess(){
-    const canOpenPath = (path) => {
-        if(typeof hasUserGrantedPath !== "function") return true;
-        return hasUserGrantedPath(path);
-    };
     const qut2Btn = document.getElementById("openQut2Btn");
     const qut3Btn = document.getElementById("openQut3Btn");
     if(qut2Btn){
-        qut2Btn.style.display = canOpenPath("/invoices/view-quotation-2.html") ? "" : "none";
+        qut2Btn.style.display = "none";
     }
     if(qut3Btn){
-        qut3Btn.style.display = canOpenPath("/invoices/view-quotation-3.html") ? "" : "none";
+        qut3Btn.style.display = "none";
     }
 }
 

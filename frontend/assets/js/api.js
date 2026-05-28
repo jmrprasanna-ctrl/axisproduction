@@ -390,9 +390,7 @@ function renderSidebarMenuByAccess(){
             path: "/invoices/invoice-list.html",
             label: "Payment",
             children: [
-                { path: "/invoices/invoice-list.html", label: "Invoices" },
-                { path: "/products/add-rental-count.html", label: "Rental Count" },
-                { path: "/products/add-rental-consumable.html", label: "Consumables" }
+                { path: "/invoices/invoice-list.html", label: "Invoices" }
             ]
         },
         { path: "/expenses/expense-list.html", label: "Expenses" },
@@ -963,13 +961,7 @@ async function loadUserAccessPermissions(){
         const dynamicPages = Array.from(new Set([
             ...normalizedAllowedPages,
             ...pagesFromActions,
-            ...(normalizedActionKeys.includes("/users/profile-list.html::edit") ? ["/users/edit-profile.html"] : []),
-            ...(
-                normalizedAllowedPages.includes("/products/add-rental-consumable.html")
-                || pagesFromActions.includes("/products/add-rental-consumable.html")
-                    ? ["/products/edit-added-consumable.html"]
-                    : []
-            )
+            ...(normalizedActionKeys.includes("/users/profile-list.html::edit") ? ["/users/edit-profile.html"] : [])
         ]));
         if(typeof data?.has_access_config === "boolean"){
             let nextConfigState = data.has_access_config;
