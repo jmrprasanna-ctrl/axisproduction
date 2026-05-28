@@ -296,14 +296,6 @@ const DASHBOARD_MENU_ENTRIES = [
         ]
     },
     {
-        path: "/products/general-machine.html",
-        label: "Machines",
-        children: [
-            { path: "/products/general-machine.html", label: "General" },
-            { path: "/products/machine.html", label: "Rental" }
-        ]
-    },
-    {
         path: "/invoices/invoice-list.html",
         label: "Payment",
         children: [

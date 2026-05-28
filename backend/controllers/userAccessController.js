@@ -108,12 +108,6 @@ const ACCESS_MODULE_OPTIONS = [
       { path: "/products/product-list.html", label: "Products List", actions: ["view", "add", "edit", "delete"] },
       { path: "/products/add-product.html", label: "Add Product", actions: ["view", "add"] },
       { path: "/products/edit-product.html", label: "Edit Product", actions: ["view", "edit"] },
-      { path: "/products/general-machine.html", label: "General Machines", actions: ["view", "add", "edit", "delete"] },
-      { path: "/products/add-general-machine.html", label: "Add General Machine", actions: ["view", "add"] },
-      { path: "/products/edit-general-machine.html", label: "Edit General Machine", actions: ["view", "edit"] },
-      { path: "/products/machine.html", label: "Rental Machines", actions: ["view", "add", "edit", "delete"] },
-      { path: "/products/add-rental-machine.html", label: "Add Rental Machine", actions: ["view", "add"] },
-      { path: "/products/edit-rental-machine.html", label: "Edit Rental Machine", actions: ["view", "edit"] },
       { path: "/products/add-rental-count.html", label: "Rental Count", actions: ["view", "add", "edit", "delete"] },
       { path: "/products/add-rental-consumable.html", label: "Rental Consumables", actions: ["view", "add", "edit", "delete"] },
       { path: "/products/edit-added-consumable.html", label: "Edit Added Consumables", actions: ["view"] },
@@ -298,14 +292,6 @@ function expandImplicitActionDependencies(actionKeys) {
   if (set.has(toActionKey("/products/product-list.html", "edit"))) {
     add("/products/edit-product.html", "view");
     add("/products/edit-product.html", "edit");
-  }
-  if (set.has(toActionKey("/products/general-machine.html", "edit"))) {
-    add("/products/edit-general-machine.html", "view");
-    add("/products/edit-general-machine.html", "edit");
-  }
-  if (set.has(toActionKey("/products/machine.html", "edit"))) {
-    add("/products/edit-rental-machine.html", "view");
-    add("/products/edit-rental-machine.html", "edit");
   }
   if (set.has(toActionKey("/products/add-rental-consumable.html", "edit"))) {
     add("/products/edit-added-consumable.html", "view");

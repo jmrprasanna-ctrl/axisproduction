@@ -360,14 +360,6 @@ function renderSidebarMenuByAccess(){
             ]
         },
         {
-            path: "/products/general-machine.html",
-            label: "Machines",
-            children: [
-                { path: "/products/general-machine.html", label: "General" },
-                { path: "/products/machine.html", label: "Rental" }
-            ]
-        },
-        {
             path: "/invoices/invoice-list.html",
             label: "Payment",
             children: [
@@ -519,61 +511,6 @@ function bindMachinesSidebarMenu(){
     });
 }
 
-function upgradeMachinesSidebarInPlace(){
-    document.querySelectorAll(".sidebar .nav-links, .sidebar ul").forEach((nav) => {
-        const topLevelItems = Array.from(nav.children).filter((el) => el && el.tagName && el.tagName.toLowerCase() === "li");
-        const machineLis = topLevelItems.filter((li) => {
-            const directAnchor = Array.from(li.children).find((el) => el.tagName && el.tagName.toLowerCase() === "a");
-            if(!directAnchor) return false;
-            const label = String(directAnchor.textContent || "").trim().toLowerCase();
-            const href = String(directAnchor.getAttribute("href") || "").trim().replace(/\\/g, "/").toLowerCase();
-            if(li.classList.contains("nav-group-machines")) return true;
-            return label === "machines" || href.endsWith("/products/general-machine.html") || href.endsWith("products/general-machine.html");
-        });
-        if(!machineLis.length) return;
-        const machineLi = machineLis[0];
-        machineLis.slice(1).forEach((li) => li.remove());
-
-        const generalAllowed = hasUserGrantedPath("/products/general-machine.html");
-        const rentalAllowed = hasUserGrantedPath("/products/machine.html");
-        const machinesChildren = [];
-        if(generalAllowed){
-            machinesChildren.push(`<li><a href="${toMenuHref("/products/general-machine.html")}">General</a></li>`);
-        }
-        const rentalChildren = [];
-        if(rentalAllowed){
-            rentalChildren.push(`<li><a href="${toMenuHref("/products/machine.html")}">Rental Mchine</a></li>`);
-        }
-        if(rentalAllowed || rentalChildren.length){
-            if(rentalChildren.length){
-                machinesChildren.push(`
-                    <li class="nav-group nav-group-machines" data-nav-group-machines="1">
-                        <a href="#" class="nav-group-toggle" data-sidebar-group-toggle="1" aria-expanded="false">Rental</a>
-                        <ul class="nav-submenu" data-sidebar-group-menu="1">
-                            ${rentalChildren.join("")}
-                        </ul>
-                    </li>
-                `);
-            }else{
-                machinesChildren.push(`<li><a href="${toMenuHref("/products/machine.html")}">Rental</a></li>`);
-            }
-        }
-        if(!machinesChildren.length){
-            return;
-        }
-
-        machineLi.classList.add("nav-group", "nav-group-machines");
-        machineLi.setAttribute("data-nav-group-machines", "1");
-        machineLi.innerHTML = `
-            <a href="#" class="nav-group-toggle" data-sidebar-group-toggle="1" aria-expanded="false">Machines</a>
-            <ul class="nav-submenu" data-sidebar-group-menu="1">
-                ${machinesChildren.join("")}
-            </ul>
-        `;
-    });
-    bindMachinesSidebarMenu();
-}
-
 function setSidebarReadyState(isReady){
     document.querySelectorAll(".sidebar .nav-links, .sidebar ul").forEach((nav) => {
         nav.style.visibility = isReady ? "visible" : "hidden";
@@ -603,7 +540,6 @@ function applyStockNav(){
 
 function applyAccessGuards(){
     renderSidebarMenuByAccess();
-    upgradeMachinesSidebarInPlace();
     enforceUserAccess();
     enforceManagerAccess();
     applyUserNavRestrictions();
