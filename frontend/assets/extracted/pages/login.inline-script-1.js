@@ -156,5 +156,38 @@ window.addEventListener("DOMContentLoaded", () => {
     clearCredentialFields();
     window.setTimeout(clearCredentialFields, 120);
     window.setTimeout(clearCredentialFields, 320);
-    window.setTimeout(() => setLoadingOverlay(false), 950);
+
+    const minVisibleMs = 950;
+    const maxWaitForLogoMs = 2800;
+    const startedAt = Date.now();
+    const loaderLogo = document.querySelector("#axisLoadingOverlay .axis-loader-logo-wrap img");
+
+    const hideOverlay = () => {
+        const elapsed = Date.now() - startedAt;
+        const remain = Math.max(0, minVisibleMs - elapsed);
+        window.setTimeout(() => setLoadingOverlay(false), remain);
+    };
+
+    if(!loaderLogo){
+        hideOverlay();
+        return;
+    }
+
+    if(loaderLogo.complete && loaderLogo.naturalWidth > 0){
+        hideOverlay();
+        return;
+    }
+
+    let settled = false;
+    const settle = () => {
+        if(settled) return;
+        settled = true;
+        loaderLogo.removeEventListener("load", settle);
+        loaderLogo.removeEventListener("error", settle);
+        hideOverlay();
+    };
+
+    loaderLogo.addEventListener("load", settle, { once: true });
+    loaderLogo.addEventListener("error", settle, { once: true });
+    window.setTimeout(settle, maxWaitForLogoMs);
 });
