@@ -50,73 +50,22 @@ const defaultModelOptions = {
     "Service": ["OTHER"]
 };
 
-function normalizeCategories(text){
-    if(!text) return [];
-    return String(text)
-        .split(",")
-        .map(c => normalizeCategoryName(c))
-        .filter(Boolean);
-}
-
-function normalizeCategoryName(value){
-    const raw = String(value || "").trim().toLowerCase();
-    if(!raw) return "";
-    const aliases = {
-        "photocopiers": "photocopier",
-        "printers": "printer",
-        "plotters": "plotter",
-        "computers": "computer",
-        "laptops": "laptop",
-        "accessories": "accessory",
-        "consumables": "consumable",
-        "machines": "machine",
-        "services": "service",
-        "vendors": "vendor"
-    };
-    return aliases[raw] || raw;
-}
-
 function renderVendorsByCategory(){
     const vendorSelect = document.getElementById("vendor");
-    const categorySelect = document.getElementById("category");
-    const selectedCategory = normalizeCategoryName(categorySelect.selectedOptions[0]?.dataset?.name || "");
+    const selectedValue = String(vendorSelect.value || "");
     vendorSelect.innerHTML = `<option value="">Select Vendor</option>`;
 
-    let filtered = selectedCategory
-        ? allVendors.filter(v => {
-            const rawCategories = Array.isArray(v.category_list) && v.category_list.length
-                ? v.category_list.join(",")
-                : v.category;
-            return normalizeCategories(rawCategories).includes(selectedCategory);
-        })
-        : allVendors;
-
-    const usedFallbackAllVendors = Boolean(selectedCategory && !filtered.length && allVendors.length);
-    if(usedFallbackAllVendors){
-        filtered = allVendors.slice();
-    }
-
-    if(usedFallbackAllVendors){
-        const hint = document.createElement("option");
-        hint.value = "";
-        hint.disabled = true;
-        hint.textContent = "No exact category match. Showing all vendors.";
-        vendorSelect.appendChild(hint);
-    }
-
-    filtered.forEach((v) => {
+    const ordered = [...allVendors].sort((a, b) =>
+        String(a?.name || "").localeCompare(String(b?.name || ""), undefined, { sensitivity: "base", numeric: true })
+    );
+    ordered.forEach((v) => {
         const opt = document.createElement("option");
         opt.value = v.id;
         opt.innerText = v.name;
         vendorSelect.appendChild(opt);
     });
-
-    if(selectedCategory && !filtered.length && !usedFallbackAllVendors){
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.disabled = true;
-        opt.innerText = "No vendors for selected category";
-        vendorSelect.appendChild(opt);
+    if(selectedValue && Array.from(vendorSelect.options).some((option) => option.value === selectedValue)){
+        vendorSelect.value = selectedValue;
     }
 }
 

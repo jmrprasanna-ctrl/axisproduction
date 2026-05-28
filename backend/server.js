@@ -790,11 +790,6 @@ async function ensureInvoiceImportantWarrantySchema() {
 async function ensureVendorCategorySchema() {
   await runOnBusinessDatabases(async () => {
     await db.query(`
-      ALTER TABLE vendors
-      ALTER COLUMN category TYPE VARCHAR(255);
-    `);
-
-    await db.query(`
       DO $$
       DECLARE
         constraint_name TEXT;
@@ -811,6 +806,12 @@ async function ensureVendorCategorySchema() {
         END LOOP;
       END $$;
     `);
+
+    await db.query(`
+      ALTER TABLE vendors
+      DROP COLUMN IF EXISTS category;
+    `);
+
   });
 }
 

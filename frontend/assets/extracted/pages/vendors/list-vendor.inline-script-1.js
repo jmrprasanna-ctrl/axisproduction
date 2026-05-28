@@ -51,7 +51,6 @@ function renderVendors(vendors){
         tr.innerHTML = `
             <td>${v.name}</td>
             <td>${v.address}</td>
-            <td>${v.category || ""}</td>
         `;
         tr.addEventListener("click", () => {
             window.location.href = `edit-vendor.html?id=${v.id}`;
@@ -67,7 +66,7 @@ function applyVendorFilter(){
         return;
     }
     const filtered = allVendors.filter(v =>
-        [v.name, v.category].some(val => String(val || "").toLowerCase().includes(query))
+        [v.name, v.address].some(val => String(val || "").toLowerCase().includes(query))
     );
     renderVendors(sortVendorsByNameAsc(filtered));
 }
@@ -96,7 +95,7 @@ function exportPDF(){
     let y = 30;
     const rows = document.querySelectorAll("#vendorTable tbody tr");
     rows.forEach(r=>{
-        const cells = Array.from(r.children).slice(0, 3).map(td=>td.innerText);
+        const cells = Array.from(r.children).slice(0, 2).map(td=>td.innerText);
         doc.text(cells.join(" | "),14,y);
         y+=8;
     });
