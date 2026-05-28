@@ -7,6 +7,7 @@ const Product = db.define("Product", {
     id: { type: DataTypes.INTEGER, primaryKey:true, autoIncrement:true },
     product_id: { type: DataTypes.STRING, unique:true },
     description: { type: DataTypes.STRING },
+    row_type: { type: DataTypes.STRING, allowNull: false, defaultValue: "Other" },
     category_id: { type: DataTypes.INTEGER, references:{ model:Category, key:"id" } },
     model: { type: DataTypes.STRING },
     serial_no: { type: DataTypes.STRING },
@@ -22,6 +23,7 @@ const Product = db.define("Product", {
     indexes: [
         { fields: ["product_id"] },
         { fields: ["description"] },
+        { fields: ["row_type"] },
         { fields: ["model"] },
         { fields: ["category_id"] },
         { fields: ["vendor_id"] }

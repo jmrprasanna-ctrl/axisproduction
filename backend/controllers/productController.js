@@ -12,11 +12,31 @@ const toNum = (value, fallback = 0) => {
 
 const cleanUpper = (value) => String(value || "").trim().toUpperCase();
 
+const normalizeRowType = (value, fallback = "") => {
+    const token = String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    if(token === "metirial" || token === "material") return "Metirial";
+    if(token === "finish good" || token === "finishgood") return "Finish Good";
+    if(token === "other") return "Other";
+    return fallback;
+};
+
+const resolveLegacyRowType = (categoryValue) => {
+    const token = String(categoryValue || "").trim().toLowerCase().replace(/\s+/g, " ");
+    if(!token) return "";
+    if(token.includes("consumable") || token.includes("accessory") || token.includes("spare")){
+        return "Metirial";
+    }
+    if(token === "other"){
+        return "Other";
+    }
+    return "Finish Good";
+};
+
 exports.getProducts = async (req,res)=>{
     const { category } = req.query;
     const where = {};
     if(category) where.category_id = category;
-    const products = await Product.findAll({ include:[Vendor, Category] });
+    const products = await Product.findAll({ where, include:[Vendor, Category] });
     res.json(products);
 }
 
@@ -37,13 +57,14 @@ exports.searchProducts = async (req,res)=>{
                 { product_id: { [Op.iLike]: `%${q}%` } },
                 { description: { [Op.iLike]: `%${q}%` } },
                 { model: { [Op.iLike]: `%${q}%` } },
+                { row_type: { [Op.iLike]: `%${q}%` } },
                 { "$Vendor.name$": { [Op.iLike]: `%${q}%` } }
             ]
         };
 
         const rows = await Product.findAll({
             where,
-            attributes: ["id","product_id","description","model","selling_price","count"],
+            attributes: ["id","product_id","description","row_type","model","selling_price","count"],
             include: [{ model: Vendor, attributes: ["id", "name"] }],
             order: [["product_id","ASC"]],
             limit: Math.max(limit, 50)
@@ -53,15 +74,18 @@ exports.searchProducts = async (req,res)=>{
         const rank = (row) => {
             const code = String(row.product_id || "").toLowerCase();
             const desc = String(row.description || "").toLowerCase();
+            const rowType = String(row.row_type || "").toLowerCase();
             const model = String(row.model || "").toLowerCase();
             if(code === lowerQ) return 0;
             if(code.startsWith(lowerQ)) return 1;
             if(desc.startsWith(lowerQ)) return 2;
-            if(model.startsWith(lowerQ)) return 3;
-            if(code.includes(lowerQ)) return 4;
-            if(desc.includes(lowerQ)) return 5;
-            if(model.includes(lowerQ)) return 6;
-            return 7;
+            if(rowType.startsWith(lowerQ)) return 3;
+            if(model.startsWith(lowerQ)) return 4;
+            if(code.includes(lowerQ)) return 5;
+            if(desc.includes(lowerQ)) return 6;
+            if(rowType.includes(lowerQ)) return 7;
+            if(model.includes(lowerQ)) return 8;
+            return 9;
         };
 
         const ranked = rows
@@ -78,6 +102,7 @@ exports.searchProducts = async (req,res)=>{
                     id: plain.id,
                     product_id: plain.product_id,
                     description: plain.description,
+                    row_type: plain.row_type,
                     model: plain.model,
                     selling_price: plain.selling_price,
                     count: plain.count,
@@ -104,6 +129,7 @@ exports.getProductById = async (req,res)=>{
 exports.createProduct = async (req,res)=>{
     try{
         let {
+            row_type,
             category,
             product_id,
             description,
@@ -115,6 +141,7 @@ exports.createProduct = async (req,res)=>{
             vendor_id
         } = req.body;
 
+        const normalizedRowType = normalizeRowType(row_type, resolveLegacyRowType(category));
         const rawCategory = category;
         category = typeof category === "string" ? category.trim() : "";
         const parsedVendorId = Number(vendor_id);
@@ -127,7 +154,7 @@ exports.createProduct = async (req,res)=>{
         model = cleanUpper(model);
         serial_no = cleanUpper(serial_no);
 
-        if((!category && !Number.isFinite(Number(rawCategory))) || !product_id || !description || !model || !Number.isFinite(parsedVendorId) || parsedVendorId <= 0){
+        if(!normalizedRowType || !product_id || !description || !Number.isFinite(parsedVendorId) || parsedVendorId <= 0){
             return res.status(400).json({ message: "Missing required fields." });
         }
         if(parsedCount < 0 || parsedSelling < 0 || parsedDealer < 0){
@@ -142,15 +169,16 @@ exports.createProduct = async (req,res)=>{
         if(!categoryRecord && category){
             categoryRecord = await Category.findOne({ where: { name: category } });
         }
-        if(!categoryRecord){
+        if(!categoryRecord && category){
             categoryRecord = await Category.create({ name: category || `Category ${Date.now()}` });
         }
 
         const created = await Product.create({
             product_id,
             description,
-            category_id: categoryRecord.id,
-            model,
+            row_type: normalizedRowType,
+            category_id: categoryRecord ? categoryRecord.id : null,
+            model: model || null,
             serial_no: serial_no || null,
             count: parsedCount,
             selling_price: parsedSelling,
@@ -170,6 +198,17 @@ exports.getLastProductByCategoryName = async (req,res)=>{
         return res.json(null);
     }
 
+    const normalizedRowType = normalizeRowType(categoryName);
+    if(normalizedRowType){
+        const lastByRow = await Product.findOne({
+            where: { row_type: normalizedRowType },
+            order: [["createdAt","DESC"], ["id","DESC"]],
+        });
+        if(lastByRow){
+            return res.json(lastByRow);
+        }
+    }
+
     const category = await Category.findOne({ where: { name: categoryName } });
     if(!category){
         return res.json(null);
@@ -187,6 +226,7 @@ exports.updateProduct = async (req,res)=>{
     try{
         const { id } = req.params;
         let {
+            row_type,
             category,
             product_id,
             description,
@@ -198,19 +238,29 @@ exports.updateProduct = async (req,res)=>{
             vendor_id
         } = req.body;
 
+        const product = await Product.findByPk(id);
+        if(!product){
+            return res.status(404).json({ message: "Product not found." });
+        }
+
+        const fallbackRowType = product.row_type || resolveLegacyRowType(category) || "Other";
+        const normalizedRowType = normalizeRowType(row_type || category, fallbackRowType);
         const rawCategory = category;
         category = typeof category === "string" ? category.trim() : "";
-        const parsedVendorId = Number(vendor_id);
-        const parsedCount = toNum(count, 0);
-        const parsedSelling = toNum(selling_price, 0);
-        const parsedDealer = toNum(dealer_price, 0);
+        const vendorCandidate = Number(vendor_id);
+        const parsedVendorId = Number.isFinite(vendorCandidate) && vendorCandidate > 0
+            ? vendorCandidate
+            : Number(product.vendor_id);
+        const parsedCount = toNum(count, Number(product.count || 0));
+        const parsedSelling = toNum(selling_price, Number(product.selling_price || 0));
+        const parsedDealer = toNum(dealer_price, Number(product.dealer_price || 0));
 
-        product_id = String(product_id || "").trim();
-        description = cleanUpper(description);
+        product_id = String(product_id || product.product_id || "").trim();
+        description = cleanUpper(description || product.description);
         model = cleanUpper(model);
         serial_no = cleanUpper(serial_no);
 
-        if((!category && !Number.isFinite(Number(rawCategory))) || !description || !model || !Number.isFinite(parsedVendorId) || parsedVendorId <= 0){
+        if(!normalizedRowType || !description || !Number.isFinite(parsedVendorId) || parsedVendorId <= 0){
             return res.status(400).json({ message: "Missing required fields." });
         }
         if(parsedCount < 0 || parsedSelling < 0 || parsedDealer < 0){
@@ -226,19 +276,17 @@ exports.updateProduct = async (req,res)=>{
             categoryRecord = await Category.findOne({ where: { name: category } });
         }
         if(!categoryRecord){
-            categoryRecord = await Category.create({ name: category || `Category ${Date.now()}` });
-        }
-
-        const product = await Product.findByPk(id);
-        if(!product){
-            return res.status(404).json({ message: "Product not found." });
+            categoryRecord = category
+                ? await Category.create({ name: category || `Category ${Date.now()}` })
+                : null;
         }
 
         await product.update({
             product_id: product_id || product.product_id,
             description,
-            category_id: categoryRecord.id,
-            model,
+            row_type: normalizedRowType,
+            category_id: categoryRecord ? categoryRecord.id : product.category_id,
+            model: model || product.model || null,
             serial_no: serial_no || null,
             count: parsedCount,
             selling_price: parsedSelling,

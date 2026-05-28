@@ -815,6 +815,34 @@ async function ensureVendorCategorySchema() {
   });
 }
 
+async function ensureProductRowSchema() {
+  await runOnBusinessDatabases(async () => {
+    await db.query(`
+      ALTER TABLE products
+      ADD COLUMN IF NOT EXISTS row_type VARCHAR(30) DEFAULT 'Other';
+    `);
+
+    await db.query(`
+      UPDATE products p
+      SET row_type = CASE
+        WHEN LOWER(COALESCE(c.name, '')) IN ('consumable', 'accessory') OR LOWER(COALESCE(c.name, '')) LIKE '%spare%' THEN 'Metirial'
+        WHEN LOWER(COALESCE(c.name, '')) = 'other' THEN 'Other'
+        WHEN TRIM(COALESCE(c.name, '')) = '' THEN 'Other'
+        ELSE 'Finish Good'
+      END
+      FROM categories c
+      WHERE p.category_id = c.id
+        AND (p.row_type IS NULL OR TRIM(p.row_type) = '');
+    `);
+
+    await db.query(`
+      UPDATE products
+      SET row_type = 'Other'
+      WHERE row_type IS NULL OR TRIM(row_type) = '';
+    `);
+  });
+}
+
 async function ensureUserAccessSchema() {
   await runOnBusinessDatabases(async () => {
     await db.query(`
@@ -1347,6 +1375,7 @@ async function startServer() {
     await ensureRentalMachineCountSchema();
     await ensureCustomerCodeSchema();
     await ensureVendorCategorySchema();
+    await ensureProductRowSchema();
     await ensureUserAccessSchema();
     await ensureCompanyProfilesSchema();
     await ensureUserMappingSchema();

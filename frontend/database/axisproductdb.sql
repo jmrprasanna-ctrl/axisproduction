@@ -438,6 +438,7 @@ CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     product_id VARCHAR(20),
     description VARCHAR(255),
+    row_type VARCHAR(30) DEFAULT 'Other',
     category_id INT,
     model VARCHAR(100),
     serial_no VARCHAR(100),
@@ -451,6 +452,20 @@ CREATE TABLE IF NOT EXISTS products (
 
 ALTER TABLE products ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW();
 ALTER TABLE products ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW();
+ALTER TABLE products ADD COLUMN IF NOT EXISTS row_type VARCHAR(30) DEFAULT 'Other';
+UPDATE products p
+SET row_type = CASE
+    WHEN LOWER(COALESCE(c.name, '')) IN ('consumable', 'accessory') OR LOWER(COALESCE(c.name, '')) LIKE '%spare%' THEN 'Metirial'
+    WHEN LOWER(COALESCE(c.name, '')) = 'other' THEN 'Other'
+    WHEN TRIM(COALESCE(c.name, '')) = '' THEN 'Other'
+    ELSE 'Finish Good'
+END
+FROM categories c
+WHERE p.category_id = c.id
+  AND (p.row_type IS NULL OR TRIM(p.row_type) = '');
+UPDATE products
+SET row_type = 'Other'
+WHERE row_type IS NULL OR TRIM(row_type) = '';
 
 DO $$
 BEGIN

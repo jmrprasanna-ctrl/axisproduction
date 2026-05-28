@@ -40,7 +40,7 @@ function renderProducts(products){
     products.forEach(p=>{
         const tr = document.createElement("tr");
         const vendorName = p.Vendor ? p.Vendor.name : (p.vendor_name || "");
-        const categoryName = p.Category ? p.Category.name : (p.category || "");
+        const categoryName = p.row_type || (p.Category ? p.Category.name : (p.category || ""));
         tr.innerHTML = `
             <td>${p.product_id}</td>
             <td>${p.description}</td>
@@ -70,7 +70,7 @@ function applyProductFilter(){
     }
 
     const filtered = allProducts.filter(p => {
-        const categoryName = p.Category ? p.Category.name : (p.category || "");
+        const categoryName = p.row_type || (p.Category ? p.Category.name : (p.category || ""));
         return [p.product_id, p.description, categoryName, p.model, p.serial_no]
             .some(v => String(v || "").toLowerCase().includes(query));
     });
