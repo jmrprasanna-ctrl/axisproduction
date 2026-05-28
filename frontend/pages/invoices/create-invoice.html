@@ -59,18 +59,6 @@
                 </div>
 
                 <div class="field">
-                    <label for="machine">Machine</label>
-                    <select id="machine">
-                        <option value="">Select Customer First</option>
-                    </select>
-                </div>
-
-                <div class="field">
-                    <label for="machineSerialNo">Serial No</label>
-                    <input class="readonly-input" type="text" id="machineSerialNo" readonly>
-                </div>
-
-                <div class="field">
                     <label for="address">Address</label>
                     <input class="readonly-input" type="text" id="address" readonly>
                 </div>
@@ -83,30 +71,6 @@
                 <div class="field">
                     <label for="tel">Tel</label>
                     <input class="readonly-input" type="text" id="tel" readonly>
-                </div>
-
-                <div class="field">
-                    <label for="count">Count</label>
-                    <input type="number" id="count" min="0" step="1" placeholder="Enter count">
-                </div>
-
-                <div class="field sup-tech-toggle-field">
-                    <label for="supTechEnabled">Sup.Tech</label>
-                    <div class="sup-tech-toggle-input-wrap">
-                        <input type="checkbox" id="supTechEnabled">
-                    </div>
-                </div>
-
-                <div class="field sup-tech-field sup-tech-hidden">
-                    <label for="supportTechnician">Support Technician</label>
-                    <select id="supportTechnician">
-                        <option value="">Select Technician (Optional)</option>
-                    </select>
-                </div>
-
-                <div class="field sup-tech-field sup-tech-hidden">
-                    <label for="supportTechnicianPercentage">Support Technician Percentage (%)</label>
-                    <input type="number" id="supportTechnicianPercentage" min="0" step="0.01" placeholder="Enter percentage" disabled>
                 </div>
 
                 <div class="field">
@@ -135,10 +99,6 @@
                 <div class="field">
                     <label for="invoiceDate">Invoice Date</label>
                     <input type="date" id="invoiceDate" required>
-                </div>
-                <div class="field">
-                    <label for="quotationDate">Quotation Date</label>
-                    <input type="date" id="quotationDate" required>
                 </div>
 
                 <div class="card product-card field-span-full">
@@ -175,14 +135,7 @@
                 <div class="field-span-full">
                     <div class="important-actions">
                         <button class="btn btn-inline" id="addImportantBtn" type="button">Important</button>
-                        <select id="supportImportantSelect" class="support-important-select">
-                            <option value="">Select Support Important</option>
-                        </select>
-                        <button class="icon-btn" id="addImportantFromSupportBtn" type="button" aria-label="Add important note" title="Add important note">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                            </svg>
-                        </button>
+                        <button class="btn btn-inline" id="addSupportNoteBtn" type="button">Support Note</button>
                     </div>
                     <div class="card card-mt-12">
                         <div class="table-scroll">

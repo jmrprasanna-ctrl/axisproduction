@@ -22,9 +22,7 @@ html, body { overflow-x: hidden; }
     flex: 0 0 auto;
 }
 .is-hidden { display: none; }
-.sup-tech-hidden { display: none; }
 .card-mt-12 { margin-top: 12px; }
-.support-important-select { min-width: 260px; }
 .w-80 { width: 80px; }
 .w-90 { width: 90px; }
 .w-110 { width: 110px; }
@@ -42,16 +40,6 @@ html, body { overflow-x: hidden; }
 .invoice-grid .field input,
 .invoice-grid .field select,
 .invoice-grid .field textarea { box-sizing: border-box; }
-.sup-tech-toggle-field .sup-tech-toggle-input-wrap {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-}
-.sup-tech-toggle-field input[type="checkbox"] {
-    width: 18px !important;
-    height: 18px !important;
-    margin: 0;
-}
 
 .product-card {
     margin-top: 12px;

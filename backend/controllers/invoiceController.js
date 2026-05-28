@@ -847,7 +847,7 @@ exports.getSealVImage = async (req,res)=>{
 };
 
 exports.createInvoice = async (req,res)=>{
-    const { invoice_no, invoice_date, quotation_date, quotation2_date, quotation3_date, quotation2_customer_name, quotation3_customer_name, customer_id, items, importants, machine_description, serial_no, machine_count, support_technician, support_technician_percentage, payment_method } = req.body;
+    const { invoice_no, invoice_date, quotation2_date, quotation3_date, quotation2_customer_name, quotation3_customer_name, customer_id, items, importants, payment_method } = req.body;
     if(!customer_id || !invoice_no || !items || !items.length) {
         return res.status(400).json({message:"Invalid data"});
     }
@@ -857,27 +857,13 @@ exports.createInvoice = async (req,res)=>{
             const gross = Number(item.gross) || 0;
             total_amount += gross;
         }
-        const parsedCount = machine_count === undefined || machine_count === null || machine_count === ""
-            ? 0
-            : Number(machine_count);
-        const parsedSupportTechnicianPercentage =
-            support_technician_percentage === undefined ||
-            support_technician_percentage === null ||
-            support_technician_percentage === ""
-                ? null
-                : Number(support_technician_percentage);
         const parsedInvoiceDate = String(invoice_date || "").trim();
         const invoiceDateValue = parsedInvoiceDate || new Date().toISOString().slice(0, 10);
         const isValidInvoiceDate = /^\d{4}-\d{2}-\d{2}$/.test(invoiceDateValue) && !Number.isNaN(new Date(`${invoiceDateValue}T00:00:00`).getTime());
         if(!isValidInvoiceDate){
             return res.status(400).json({ message: "Invalid invoice date." });
         }
-        const parsedQuotationDate = String(quotation_date || "").trim();
-        const quotationDateValue = parsedQuotationDate || invoiceDateValue;
-        const isValidQuotationDate = /^\d{4}-\d{2}-\d{2}$/.test(quotationDateValue) && !Number.isNaN(new Date(`${quotationDateValue}T00:00:00`).getTime());
-        if(!isValidQuotationDate){
-            return res.status(400).json({ message: "Invalid quotation date." });
-        }
+        const quotationDateValue = invoiceDateValue;
         const parsedQuotation2Date = String(quotation2_date || "").trim();
         const quotation2DateValue = parsedQuotation2Date || quotationDateValue;
         const isValidQuotation2Date = /^\d{4}-\d{2}-\d{2}$/.test(quotation2DateValue) && !Number.isNaN(new Date(`${quotation2DateValue}T00:00:00`).getTime());
@@ -913,11 +899,11 @@ exports.createInvoice = async (req,res)=>{
             quotation2_customer_name: quotation2CustomerNameValue,
             quotation3_customer_name: quotation3CustomerNameValue,
             customer_id,
-            machine_description: String(machine_description || "").trim() || null,
-            serial_no: String(serial_no || "").trim() || null,
-            machine_count: Number.isFinite(parsedCount) && parsedCount >= 0 ? parsedCount : 0,
-            support_technician: String(support_technician || "").trim() || null,
-            support_technician_percentage: Number.isFinite(parsedSupportTechnicianPercentage) ? parsedSupportTechnicianPercentage : null,
+            machine_description: null,
+            serial_no: null,
+            machine_count: 0,
+            support_technician: null,
+            support_technician_percentage: null,
             payment_method: normalizePaymentMethod(payment_method),
             payment_status: "Pending",
             cheque_no: null,

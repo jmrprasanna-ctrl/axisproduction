@@ -1,7 +1,6 @@
 let products = [];
 let invoiceCounter = 1;
 let customersCache = [];
-let machinesByCustomer = {};
 const selectedDb = String(localStorage.getItem("selectedDatabaseName") || "").toLowerCase();
 const DEFAULT_IMPORTANT_NOTES = selectedDb === "demo"
     ? [
@@ -12,7 +11,6 @@ const DEFAULT_IMPORTANT_NOTES = selectedDb === "demo"
         "Ex-stock-subject to prior sale of Supply of items."
     ];
 let importantNotes = [...DEFAULT_IMPORTANT_NOTES];
-let supportImportantLibrary = [];
 let productSearchCache = null;
 const DELETE_ICON_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9.5 7V5.5h5V7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7.5 7.5l.8 11a1 1 0 0 0 1 .9h5.4a1 1 0 0 0 1-.9l.8-11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 10.5v6M14 10.5v6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
 
@@ -56,38 +54,15 @@ function addImportantRow(){
     renderImportantTable();
 }
 
-function renderSupportImportantOptions(){
-    const select = document.getElementById("supportImportantSelect");
-    if(!select) return;
-    select.innerHTML = `<option value="">Select Support Important</option>`;
-    supportImportantLibrary.forEach((row) => {
-        const period = String(row.warranty_period || "3 month").trim();
-        const note = String(row.important_text || "").trim();
-        const opt = document.createElement("option");
-        opt.value = row.id;
-        opt.dataset.note = note;
-        opt.dataset.warranty = period;
-        opt.innerText = `${note} (${period})`;
-        select.appendChild(opt);
-    });
-}
-
-async function loadSupportImportantLibrary(){
-    supportImportantLibrary = [];
-    renderSupportImportantOptions();
-}
-
-function addImportantFromSupport(){
-    const select = document.getElementById("supportImportantSelect");
-    const option = select.options[select.selectedIndex];
-    const note = option ? String(option.dataset.note || "").trim() : "";
-    const warranty = option ? String(option.dataset.warranty || "").trim() : "";
+function addSupportNoteRow(){
+    const text = prompt("Enter support note");
+    if(text === null) return;
+    const note = String(text).trim();
     if(!note){
-        alert("Select a support important.");
+        alert("Support note cannot be empty.");
         return;
     }
-    const linkedNote = warranty ? `${note} (Warranty: ${warranty})` : note;
-    importantNotes.push(linkedNote);
+    importantNotes.push(`Support: ${note}`);
     renderImportantTable();
 }
 
@@ -99,66 +74,6 @@ function removeImportantRow(index){
 function resetDefaultImportantNotes(){
     importantNotes = [...DEFAULT_IMPORTANT_NOTES];
     renderImportantTable();
-}
-
-function applySupTechVisibility(){
-    const supTechEnabled = document.getElementById("supTechEnabled");
-    const supportFields = Array.from(document.querySelectorAll(".sup-tech-field"));
-    const select = document.getElementById("supportTechnician");
-    const percentageInput = document.getElementById("supportTechnicianPercentage");
-    const enabled = !!(supTechEnabled && supTechEnabled.checked);
-
-    supportFields.forEach((field) => field.classList.toggle("sup-tech-hidden", !enabled));
-
-    if(!enabled){
-        if(select) select.value = "";
-        if(percentageInput){
-            percentageInput.value = "";
-            percentageInput.disabled = true;
-        }
-        return;
-    }
-
-    if(percentageInput){
-        percentageInput.disabled = !select || !select.value;
-    }
-}
-
-async function initSupportTechnicians(){
-    const select = document.getElementById("supportTechnician");
-    const percentageInput = document.getElementById("supportTechnicianPercentage");
-    const supTechEnabled = document.getElementById("supTechEnabled");
-    select.innerHTML = `<option value="">Select Technician (Optional)</option>`;
-    if(percentageInput){
-        percentageInput.value = "";
-        percentageInput.disabled = true;
-    }
-    if(supTechEnabled){
-        supTechEnabled.checked = false;
-    }
-
-    try{
-        const technicians = await request("/technicians","GET");
-        (Array.isArray(technicians) ? technicians : []).forEach((t) => {
-            const opt = document.createElement("option");
-            opt.value = t.id;
-            opt.innerText = t.technician_name || t.email || `Technician ${t.id}`;
-            select.appendChild(opt);
-        });
-    }catch(_err){
-                                                                                            
-    }
-
-    select.onchange = () => {
-        applySupTechVisibility();
-    };
-
-    if(supTechEnabled){
-        supTechEnabled.onchange = () => {
-            applySupTechVisibility();
-        };
-    }
-    applySupTechVisibility();
 }
 
 function clearCustomerDetails(){
@@ -176,70 +91,6 @@ function clearCustomerDetails(){
     applyGlobalVatToAllRows(0);
 }
 
-function resetMachineSelect(){
-    const machineSelect = document.getElementById("machine");
-    machineSelect.innerHTML = `<option value="">Select Customer First</option>`;
-    document.getElementById("machineSerialNo").value = "";
-}
-
-function buildMachineLookup(rentalMachines, generalMachines){
-    machinesByCustomer = {};
-    const allMachines = []
-        .concat(Array.isArray(rentalMachines) ? rentalMachines : [])
-        .concat(Array.isArray(generalMachines) ? generalMachines : []);
-
-    allMachines.forEach((machine) => {
-        const customerId = Number(machine.customer_id || (machine.Customer && machine.Customer.id));
-        if (!customerId) return;
-
-        if (!machinesByCustomer[customerId]) {
-            machinesByCustomer[customerId] = [];
-        }
-
-        const machineCode = machine.machine_id || "";
-        const machineTitle = machine.machine_title || machine.model || "MACHINE";
-        const serialNo = machine.serial_no ? ` (${machine.serial_no})` : "";
-        const label = `${machineCode} - ${machineTitle}${serialNo}`;
-        const value = machineCode || `MACHINE-${machine.id || ""}`;
-
-        machinesByCustomer[customerId].push({
-            value,
-            label,
-            machine_description: machine.machine_title || machine.model || "",
-            serial_no: machine.serial_no || ""
-        });
-    });
-}
-
-function populateMachineSelect(customerId){
-    const machineSelect = document.getElementById("machine");
-    machineSelect.innerHTML = `<option value="">Select Machine</option>`;
-
-    const list = machinesByCustomer[Number(customerId)] || [];
-    if (!list.length) {
-        machineSelect.innerHTML = `<option value="">No Machines for Selected Customer</option>`;
-        document.getElementById("machineSerialNo").value = "";
-        return;
-    }
-
-    list.forEach((machine) => {
-        const opt = document.createElement("option");
-        opt.value = machine.value;
-        opt.innerText = machine.label;
-        opt.dataset.machineDescription = machine.machine_description || "";
-        opt.dataset.serialNo = machine.serial_no || "";
-        machineSelect.appendChild(opt);
-    });
-
-    document.getElementById("machineSerialNo").value = "";
-}
-
-function fillMachineSerialNo(){
-    const machineSelect = document.getElementById("machine");
-    const selectedOption = machineSelect.options[machineSelect.selectedIndex];
-    document.getElementById("machineSerialNo").value = selectedOption ? (selectedOption.dataset.serialNo || "") : "";
-}
-
 function applyGlobalVatToAllRows(vatValue){
     const normalizedVat = Number.isFinite(Number(vatValue)) ? Number(vatValue) : 0;
     const rows = Array.from(document.querySelectorAll(".invoice-product-row"));
@@ -253,8 +104,7 @@ function applyGlobalVatToAllRows(vatValue){
 
 async function refreshInvoiceNoBySelectedDate(){
     const invoiceDate = String(document.getElementById("invoiceDate")?.value || "").trim();
-    const quotationDate = String(document.getElementById("quotationDate")?.value || "").trim();
-    const seedDate = invoiceDate || quotationDate || new Date().toISOString().slice(0, 10);
+    const seedDate = invoiceDate || new Date().toISOString().slice(0, 10);
     try{
         const lastInvoice = await request(`/invoices/generate-no?date=${encodeURIComponent(seedDate)}`,"GET");
         document.getElementById("invoiceNo").value = lastInvoice.invoice_no || "";
@@ -266,11 +116,7 @@ async function refreshInvoiceNoBySelectedDate(){
                                             
 async function initInvoice(){
     try{
-        const [customersData, rentalMachines, generalMachines] = await Promise.all([
-            request("/customers","GET"),
-            request("/rental-machines","GET"),
-            request("/general-machines","GET")
-        ]);
+        const customersData = await request("/customers","GET");
 
         customersCache = (Array.isArray(customersData) ? customersData : []).slice().sort((a, b) => {
             const nameA = String(a?.name || "").trim();
@@ -287,14 +133,9 @@ async function initInvoice(){
             customerSelect.appendChild(opt);
         });
 
-        buildMachineLookup(rentalMachines, generalMachines);
-        resetMachineSelect();
         const today = new Date().toISOString().slice(0,10);
         document.getElementById("invoiceDate").value = today;
-        document.getElementById("quotationDate").value = today;
         await refreshInvoiceNoBySelectedDate();
-        await initSupportTechnicians();
-        await loadSupportImportantLibrary();
         resetDefaultImportantNotes();
     }catch(err){
         alert(err.message || "Failed to initialize invoice");
@@ -306,7 +147,6 @@ async function fillCustomerDetails(){
     const custId = Number(document.getElementById("customer").value);
     if(!custId){
         clearCustomerDetails();
-        resetMachineSelect();
         return;
     }
 
@@ -325,7 +165,6 @@ async function fillCustomerDetails(){
         if(vatValueEl) vatValueEl.value = "0";
         if(vatValueWrapEl) vatValueWrapEl.classList.toggle("is-hidden", !vatNo);
         applyGlobalVatToAllRows(0);
-        populateMachineSelect(custId);
     }catch(err){
         alert("Failed to load customer details");
     }
@@ -650,22 +489,9 @@ function clearAllFloatingProductResults(){
 document.getElementById("invoiceForm").addEventListener("submit", async function(e){
     e.preventDefault();
     const customerId = parseInt(document.getElementById("customer").value, 10);
-    const machineSelect = document.getElementById("machine");
-    const selectedMachineOption = machineSelect.options[machineSelect.selectedIndex];
-    const machineDescription = selectedMachineOption ? (selectedMachineOption.dataset.machineDescription || "") : "";
-    const serialNo = document.getElementById("machineSerialNo").value.trim();
-    const countValue = document.getElementById("count").value;
-    const supportTechSelect = document.getElementById("supportTechnician");
-    const supTechEnabled = !!document.getElementById("supTechEnabled")?.checked;
-    const supportTechName = supTechEnabled && supportTechSelect.value
-        ? (supportTechSelect.options[supportTechSelect.selectedIndex]?.text || "")
-        : "";
-    const supportTechPercentageRaw = supTechEnabled ? document.getElementById("supportTechnicianPercentage").value : "";
-    const supportTechPercentage = supportTechPercentageRaw === "" ? null : Number(supportTechPercentageRaw);
     const paymentMethod = document.getElementById("paymentMethod").value || "Cash";
     const invoiceNo = document.getElementById("invoiceNo").value;
     const invoiceDate = document.getElementById("invoiceDate").value;
-    const quotationDate = document.getElementById("quotationDate").value;
     const items = Array.from(document.querySelectorAll(".invoice-product-row")).map(r=>{
         return {
             productId: parseInt(r.querySelector(".productId").value, 10),
@@ -678,7 +504,7 @@ document.getElementById("invoiceForm").addEventListener("submit", async function
         }
     });
 
-    if(!customerId || !invoiceNo || !invoiceDate || !quotationDate || items.length===0 || items.some(i => !i.productId)){
+    if(!customerId || !invoiceNo || !invoiceDate || items.length===0 || items.some(i => !i.productId)){
         alert("Select customer and add products");
         return;
     }
@@ -689,13 +515,7 @@ document.getElementById("invoiceForm").addEventListener("submit", async function
             customer_id:customerId,
             invoice_no:invoiceNo,
             invoice_date:invoiceDate,
-            quotation_date:quotationDate,
             importants: importantNotes,
-            machine_description: machineDescription,
-            serial_no: serialNo,
-            machine_count: countValue === "" ? null : Number(countValue),
-            support_technician: supportTechName,
-            support_technician_percentage: supTechEnabled && supportTechName ? supportTechPercentage : null,
             payment_method: paymentMethod,
             items
         });
@@ -710,7 +530,7 @@ document.getElementById("invoiceForm").addEventListener("submit", async function
         const msg = err.message || "Failed to save invoice";
         if(msg.toLowerCase().includes("invoice_no") && msg.toLowerCase().includes("unique")){
             try{
-                const seedDate = String(invoiceDate || quotationDate || "").trim();
+                const seedDate = String(invoiceDate || "").trim();
                 const lastInvoice = await request(`/invoices/generate-no?date=${encodeURIComponent(seedDate)}`,"GET");
                 document.getElementById("invoiceNo").value = lastInvoice.invoice_no || "";
                 const retryNo = document.getElementById("invoiceNo").value;
@@ -719,13 +539,7 @@ document.getElementById("invoiceForm").addEventListener("submit", async function
                         customer_id:customerId,
                         invoice_no:retryNo,
                         invoice_date:invoiceDate,
-                        quotation_date:quotationDate,
                         importants: importantNotes,
-                        machine_description: machineDescription,
-                        serial_no: serialNo,
-                        machine_count: countValue === "" ? null : Number(countValue),
-                        support_technician: supportTechName,
-                        support_technician_percentage: supTechEnabled && supportTechName ? supportTechPercentage : null,
                         payment_method: paymentMethod,
                         items
                     });
@@ -873,10 +687,6 @@ const customerInput = document.getElementById("customer");
 if(customerInput){
     customerInput.addEventListener("change", fillCustomerDetails);
 }
-const machineInput = document.getElementById("machine");
-if(machineInput){
-    machineInput.addEventListener("change", fillMachineSerialNo);
-}
 const addProductRowBtn = document.getElementById("addProductRowBtn");
 if(addProductRowBtn){
     addProductRowBtn.addEventListener("click", addProductRow);
@@ -885,9 +695,9 @@ const addImportantBtn = document.getElementById("addImportantBtn");
 if(addImportantBtn){
     addImportantBtn.addEventListener("click", addImportantRow);
 }
-const addImportantFromSupportBtn = document.getElementById("addImportantFromSupportBtn");
-if(addImportantFromSupportBtn){
-    addImportantFromSupportBtn.addEventListener("click", addImportantFromSupport);
+const addSupportNoteBtn = document.getElementById("addSupportNoteBtn");
+if(addSupportNoteBtn){
+    addSupportNoteBtn.addEventListener("click", addSupportNoteRow);
 }
 const importantTableBody = document.getElementById("important-table-body");
 if(importantTableBody){
@@ -905,12 +715,8 @@ if(backToInvoiceDetailsBtn){
     backToInvoiceDetailsBtn.href = getBackToInvoiceDetailsUrl();
 }
 const invoiceDateInput = document.getElementById("invoiceDate");
-const quotationDateInput = document.getElementById("quotationDate");
 if(invoiceDateInput){
     invoiceDateInput.addEventListener("change", refreshInvoiceNoBySelectedDate);
-}
-if(quotationDateInput){
-    quotationDateInput.addEventListener("change", refreshInvoiceNoBySelectedDate);
 }
 
 initInvoice();
