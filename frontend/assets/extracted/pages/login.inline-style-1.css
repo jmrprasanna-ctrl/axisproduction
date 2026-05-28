@@ -13,7 +13,7 @@ body{
     background:
         radial-gradient(circle at 10% 10%, rgba(255,255,255,0.12) 0, transparent 35%),
         radial-gradient(circle at 90% 95%, rgba(255,255,255,0.08) 0, transparent 30%),
-        linear-gradient(135deg, #547fa8 0%, #244b6f 100%);
+        linear-gradient(135deg, #96b8ca 0%, #6f90a2 100%);
     padding: 20px;
     padding-bottom: 64px;
 }
@@ -76,7 +76,7 @@ body{
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #6faedb;
+    background: #77a5b7;
     left: 50%;
     top: 50%;
     margin-left: -3px;
@@ -114,7 +114,7 @@ body{
     background:rgba(255,255,255,0.98);
     border-radius:22px;
     border:1px solid rgba(255,255,255,0.8);
-    box-shadow:0 24px 44px rgba(0, 30, 58, 0.35);
+    box-shadow:0 24px 44px rgba(26, 54, 74, 0.28);
     padding:34px 34px 30px;
     text-align:center;
     position:relative;
@@ -130,13 +130,13 @@ body{
 .login-container h2{
     font-size:16px;
     font-weight:700;
-    color:#2b2b2b;
+    color:#2f4558;
     margin-bottom:6px;
 }
 
 .login-meta{
     font-size:16px;
-    color:#5d7082;
+    color:#607886;
     margin-bottom:22px;
 }
 
@@ -148,7 +148,7 @@ body{
 .field label{
     display:block;
     font-size:16px;
-    color:#425568;
+    color:#446172;
     margin-bottom:7px;
     font-weight:600;
 }
@@ -156,7 +156,7 @@ body{
 .login-container input{
     width:100%;
     height:52px;
-    border:1px solid #d0d0d0;
+    border:1px solid #c8d8df;
     border-radius:12px;
     background:#fdfdfd;
     padding:0 16px;
@@ -190,19 +190,19 @@ body{
 }
 
 .password-toggle:hover{
-    background:#eef3f8;
-    color:#4f7ea9;
+    background:#edf4f2;
+    color:#4c7a93;
 }
 
 .password-toggle:focus{
     outline:none;
-    box-shadow:0 0 0 3px rgba(79,126,169,0.2);
+    box-shadow:0 0 0 3px rgba(75,143,189,0.2);
 }
 
 .login-container input:focus{
     outline:none;
-    border-color:#4f7ea9;
-    box-shadow:0 0 0 3px rgba(79,126,169,0.2);
+    border-color:#4b8fbd;
+    box-shadow:0 0 0 3px rgba(75,143,189,0.2);
 }
 
 .login-btn{
@@ -211,7 +211,7 @@ body{
     border:none;
     border-radius:12px;
     margin-top:8px;
-    background:linear-gradient(180deg, #5d8bb6 0%, #4f7da8 100%);
+    background:linear-gradient(180deg, #5f96bf 0%, #4b7fa3 100%);
     color:#fff;
     font-size:16px;
     font-weight:600;

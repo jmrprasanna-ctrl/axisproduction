@@ -1,21 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --bg: #edf3fb;
-  --bg-soft: #e3eefb;
+  --bg: #eaf2f7;
+  --bg-soft: #e2ede8;
   --page-bg: var(--bg);
   --page-bg-soft: var(--bg-soft);
   --surface: #ffffff;
-  --surface-2: #f7fbff;
-  --text: #102235;
-  --muted: #5f7388;
-  --line: #d8e5f4;
-  --primary: #0f6abf;
-  --primary-2: #0a4f91;
-  --button-color: #0f6abf;
-  --button-color-2: #0a4f91;
-  --sidebar-deep: #083c6d;
-  --accent: #11a36f;
+  --surface-2: #f4f8f7;
+  --text: #1a3245;
+  --muted: #617785;
+  --line: #cfdde3;
+  --primary: #4b8fbd;
+  --primary-2: #3d759d;
+  --button-color: #4b8fbd;
+  --button-color-2: #3d759d;
+  --sidebar-deep: #335c76;
+  --accent: #58ae86;
   --danger: #d64545;
   --warning: #f59e0b;
   --radius-sm: 10px;
@@ -23,7 +23,7 @@
   --radius-lg: 22px;
   --shadow-sm: 0 8px 20px rgba(15, 52, 88, 0.08);
   --shadow-md: 0 18px 38px rgba(15, 52, 88, 0.12);
-  --ring: rgba(15, 106, 191, 0.2);
+  --ring: rgba(75, 143, 189, 0.2);
 }
 
 * {
@@ -40,8 +40,8 @@ body {
   font-family: 'Outfit', 'Segoe UI', Tahoma, sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 8% -10%, #cbe0fb 0%, transparent 35%),
-    radial-gradient(circle at 95% 110%, #cde6de 0%, transparent 28%),
+    radial-gradient(circle at 8% -10%, #cfe2f0 0%, transparent 35%),
+    radial-gradient(circle at 95% 110%, #d8e9df 0%, transparent 28%),
     linear-gradient(180deg, var(--page-bg) 0%, var(--page-bg-soft) 100%);
   line-height: 1.45;
   padding-bottom: 56px;
@@ -91,7 +91,7 @@ p {
 .chart-container,
 .login-container,
 .todo-section {
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -183,7 +183,7 @@ button,
 button:hover,
 .btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(15, 106, 191, 0.22);
+  box-shadow: 0 12px 24px rgba(75, 143, 189, 0.24);
   filter: brightness(1.03);
 }
 
@@ -209,9 +209,9 @@ button:active,
 }
 
 .btn-secondary {
-  background: #e9f3fc;
-  color: #0b4f93;
-  border: 1px solid #cfe1f5;
+  background: #e8f3ef;
+  color: #2f6b53;
+  border: 1px solid #c9dfd3;
   text-decoration: none;
 }
 
@@ -232,7 +232,7 @@ table {
 }
 
 thead {
-  background: linear-gradient(180deg, #e8f2fc 0%, #deecfb 100%);
+  background: linear-gradient(180deg, #e8f1f5 0%, #dfe9ee 100%);
 }
 
 th,
@@ -250,11 +250,11 @@ th {
 }
 
 tbody tr:nth-child(even) {
-  background: #fbfdff;
+  background: #fbfcfc;
 }
 
 tbody tr:hover {
-  background: #f3f8ff;
+  background: #f1f6f4;
 }
 
 .login-container {
@@ -296,9 +296,9 @@ tbody tr:hover {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  border: 1px solid #d6e5f6;
+  border: 1px solid var(--line);
   background: #fff;
-  color: #17416b;
+  color: var(--text);
   box-shadow: var(--shadow-sm);
   margin-top: 0;
   padding: 0;
@@ -320,7 +320,7 @@ tbody tr:hover {
   padding: 10px 14px;
   background: rgba(255, 255, 255, 0.92);
   border-top: 1px solid var(--line);
-  color: #2c4762;
+  color: #415867;
   text-align: center;
   font-size: 0.84rem;
   z-index: 1100;

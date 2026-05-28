@@ -76,6 +76,14 @@ let appHealth = {
   startedAt: null,
 };
 let businessDatabaseNames = ["axisproductdb", "demo"];
+const DEFAULT_THEME_PRIMARY_COLOR = "#4b8fbd";
+const DEFAULT_THEME_ACCENT_COLOR = "#58ae86";
+const DEFAULT_THEME_BACKGROUND_COLOR = "#eaf2f7";
+const DEFAULT_THEME_BUTTON_COLOR = "#4b8fbd";
+
+function normalizeThemeColor(value) {
+  return String(value || "").trim().toLowerCase();
+}
 
 function toDbName(value) {
   return db.normalizeDatabaseName(value);
@@ -193,6 +201,52 @@ async function ensureDefaultCategories() {
 
 async function ensureDefaultUiSettings() {
   await runOnBusinessDatabases(async () => {
+    await db.query(`ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS primary_color VARCHAR(24) NOT NULL DEFAULT '${DEFAULT_THEME_PRIMARY_COLOR}';`);
+    await db.query(`ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS accent_color VARCHAR(24) NOT NULL DEFAULT '${DEFAULT_THEME_ACCENT_COLOR}';`);
+    await db.query(`ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS background_color VARCHAR(24) NOT NULL DEFAULT '${DEFAULT_THEME_BACKGROUND_COLOR}';`);
+    await db.query(`ALTER TABLE ui_settings ADD COLUMN IF NOT EXISTS button_color VARCHAR(24) NOT NULL DEFAULT '${DEFAULT_THEME_BUTTON_COLOR}';`);
+    await db.query(`ALTER TABLE ui_settings ALTER COLUMN primary_color SET DEFAULT '${DEFAULT_THEME_PRIMARY_COLOR}';`);
+    await db.query(`ALTER TABLE ui_settings ALTER COLUMN accent_color SET DEFAULT '${DEFAULT_THEME_ACCENT_COLOR}';`);
+    await db.query(`ALTER TABLE ui_settings ALTER COLUMN background_color SET DEFAULT '${DEFAULT_THEME_BACKGROUND_COLOR}';`);
+    await db.query(`ALTER TABLE ui_settings ALTER COLUMN button_color SET DEFAULT '${DEFAULT_THEME_BUTTON_COLOR}';`);
+    await db.query(`
+      UPDATE ui_settings
+      SET primary_color = '${DEFAULT_THEME_PRIMARY_COLOR}'
+      WHERE primary_color IS NULL OR LOWER(TRIM(primary_color)) = '#0f6abf';
+    `);
+    await db.query(`
+      UPDATE ui_settings
+      SET accent_color = '${DEFAULT_THEME_ACCENT_COLOR}'
+      WHERE accent_color IS NULL OR LOWER(TRIM(accent_color)) = '#11a36f';
+    `);
+    await db.query(`
+      UPDATE ui_settings
+      SET background_color = '${DEFAULT_THEME_BACKGROUND_COLOR}'
+      WHERE background_color IS NULL OR LOWER(TRIM(background_color)) = '#edf3fb';
+    `);
+    await db.query(`
+      UPDATE ui_settings
+      SET button_color = '${DEFAULT_THEME_BUTTON_COLOR}'
+      WHERE button_color IS NULL OR LOWER(TRIM(button_color)) = '#0f6abf';
+    `);
+    await db.query(`
+      DO $$
+      BEGIN
+        IF to_regclass('public.user_preference_settings') IS NOT NULL THEN
+          UPDATE user_preference_settings
+          SET primary_color = '${DEFAULT_THEME_PRIMARY_COLOR}'
+          WHERE primary_color IS NULL OR LOWER(TRIM(primary_color)) = '#0f6abf';
+
+          UPDATE user_preference_settings
+          SET background_color = '${DEFAULT_THEME_BACKGROUND_COLOR}'
+          WHERE background_color IS NULL OR LOWER(TRIM(background_color)) = '#edf3fb';
+
+          UPDATE user_preference_settings
+          SET button_color = '${DEFAULT_THEME_BUTTON_COLOR}'
+          WHERE button_color IS NULL OR LOWER(TRIM(button_color)) = '#0f6abf';
+        END IF;
+      END $$;
+    `);
     await db.query(`
       ALTER TABLE ui_settings
       ADD COLUMN IF NOT EXISTS quotation3_template_pdf_path VARCHAR(500);
@@ -207,16 +261,34 @@ async function ensureDefaultUiSettings() {
       await UiSetting.create({
         app_name: "AXIS PRODUCTION",
         footer_text: "Copyright © 2025 Powered by CRONIT SOLLUTIONS, All Right Received.",
-        primary_color: "#0f6abf",
-        accent_color: "#11a36f",
+        primary_color: DEFAULT_THEME_PRIMARY_COLOR,
+        accent_color: DEFAULT_THEME_ACCENT_COLOR,
+        background_color: DEFAULT_THEME_BACKGROUND_COLOR,
+        button_color: DEFAULT_THEME_BUTTON_COLOR,
       });
       return;
     }
 
     const currentAppName = String(first.app_name || "").trim().toLowerCase();
     const isLegacyAppName = currentAppName === "axis_production" || currentAppName.includes("inhouse");
+    const updates = {};
     if (isLegacyAppName) {
-      await first.update({ app_name: "AXIS PRODUCTION" });
+      updates.app_name = "AXIS PRODUCTION";
+    }
+    if (!normalizeThemeColor(first.primary_color) || normalizeThemeColor(first.primary_color) === "#0f6abf") {
+      updates.primary_color = DEFAULT_THEME_PRIMARY_COLOR;
+    }
+    if (!normalizeThemeColor(first.accent_color) || normalizeThemeColor(first.accent_color) === "#11a36f") {
+      updates.accent_color = DEFAULT_THEME_ACCENT_COLOR;
+    }
+    if (!normalizeThemeColor(first.background_color) || normalizeThemeColor(first.background_color) === "#edf3fb") {
+      updates.background_color = DEFAULT_THEME_BACKGROUND_COLOR;
+    }
+    if (!normalizeThemeColor(first.button_color) || normalizeThemeColor(first.button_color) === "#0f6abf") {
+      updates.button_color = DEFAULT_THEME_BUTTON_COLOR;
+    }
+    if (Object.keys(updates).length) {
+      await first.update(updates);
     }
   });
 }
