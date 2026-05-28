@@ -388,7 +388,7 @@ function renderSidebarMenuByAccess(){
         },
         {
             path: "/invoices/invoice-list.html",
-            label: "Payment",
+            label: "Sales",
             children: [
                 { path: "/invoices/invoice-list.html", label: "Invoices" }
             ]
