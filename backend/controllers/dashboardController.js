@@ -1,14 +1,10 @@
 const User = require("../models/User");
 const Product = require("../models/Product");
-const RentalMachine = require("../models/RentalMachine");
-const GeneralMachine = require("../models/GeneralMachine");
 const Customer = require("../models/Customer");
 const Vendor = require("../models/Vendor");
 const Invoice = require("../models/Invoice");
 const InvoiceItem = require("../models/InvoiceItem");
 const Expense = require("../models/Expense");
-const RentalMachineCount = require("../models/RentalMachineCount");
-const RentalMachineConsumable = require("../models/RentalMachineConsumable");
 const { queueDailyDatabaseBackup } = require("./systemBackupController");
 const { Op, fn, col, where: sqWhere } = require("sequelize");
 
@@ -57,24 +53,6 @@ function getGeneralCustomerInclude(){
             }
         }
     };
-}
-
-function sumRentalCountPrice(rows){
-    return (Array.isArray(rows) ? rows : []).reduce((sum, row) => {
-        const input = Number(row.input_count || 0);
-        const updated = Number(row.updated_count || 0);
-        if(!Number.isFinite(input) || !Number.isFinite(updated)) return sum;
-        return sum + ((updated - input) * 1);
-    }, 0);
-}
-
-function sumRentalConsumablesPrice(rows){
-    return (Array.isArray(rows) ? rows : []).reduce((sum, row) => {
-        const qty = Number(row.quantity || 0);
-        const dealer = Number((row.Product && row.Product.dealer_price) || 0);
-        if(!Number.isFinite(qty) || !Number.isFinite(dealer) || qty <= 0 || dealer <= 0) return sum;
-        return sum + (qty * dealer);
-    }, 0);
 }
 
 function toDateOnlyText(value){
@@ -147,39 +125,23 @@ function buildEmptySummaryPayload(period, periodStart, periodEnd, baseDate){
     const monthlyProfit = new Array(12).fill(0);
     return {
         totalUsers: 0,
-        totalGeneralMachines: 0,
-        totalRentalMachines: 0,
         totalProducts: 0,
         totalCustomers: 0,
         totalVendors: 0,
         totalSales: 0,
         receivedPayment: 0,
-        rentalMachinesCountsPrice: 0,
-        rentalConsumablesPrice: 0,
         totalExpenses: 0,
         netProfit: 0,
-        technicianPaid: 0,
-        technicianPaidForProfit: 0,
         vendorPaid: 0,
         totalSalesAllTime: 0,
         receivedPaymentAllTime: 0,
-        rentalMachinesCountsPriceAllTime: 0,
-        rentalMachinesCountsPriceAllInputs: 0,
-        rentalConsumablesPriceAllTime: 0,
-        rentalConsumablesPriceAllInputs: 0,
         totalExpensesAllTime: 0,
         netProfitAllTime: 0,
-        technicianPaidAllTime: 0,
-        technicianPaidAllTimeForProfit: 0,
         vendorPaidAllTime: 0,
         totalSalesPeriod: 0,
         receivedPaymentPeriod: 0,
-        rentalMachinesCountsPricePeriod: 0,
-        rentalConsumablesPricePeriod: 0,
         totalExpensesPeriod: 0,
         netProfitPeriod: 0,
-        technicianPaidPeriod: 0,
-        technicianPaidForProfitPeriod: 0,
         vendorPaidPeriod: 0,
         lowStock: [],
         months,
@@ -214,8 +176,6 @@ async function buildSchemaCompatibleSummary(period, periodStart, periodEnd, base
     };
 
     const totalUsers = toNumberSafe(await safe(() => User.count(), 0));
-    const totalGeneralMachines = toNumberSafe(await safe(() => GeneralMachine.count(), 0));
-    const totalRentalMachines = toNumberSafe(await safe(() => RentalMachine.count(), 0));
     const totalProducts = toNumberSafe(await safe(() => Product.count(), 0));
     const totalCustomers = toNumberSafe(await safe(() => Customer.count(), 0));
     const totalVendors = toNumberSafe(await safe(() => Vendor.count(), 0));
@@ -320,39 +280,23 @@ async function buildSchemaCompatibleSummary(period, periodStart, periodEnd, base
 
     return {
         totalUsers,
-        totalGeneralMachines,
-        totalRentalMachines,
         totalProducts,
         totalCustomers,
         totalVendors,
         totalSales: totalSalesPeriodSafe,
         receivedPayment: receivedPaymentPeriodSafe,
-        rentalMachinesCountsPrice: 0,
-        rentalConsumablesPrice: 0,
         totalExpenses: totalExpensesPeriodSafe,
         netProfit: netProfitPeriod,
-        technicianPaid: 0,
-        technicianPaidForProfit: 0,
         vendorPaid: 0,
         totalSalesAllTime,
         receivedPaymentAllTime,
-        rentalMachinesCountsPriceAllTime: 0,
-        rentalMachinesCountsPriceAllInputs: 0,
-        rentalConsumablesPriceAllTime: 0,
-        rentalConsumablesPriceAllInputs: 0,
         totalExpensesAllTime,
         netProfitAllTime,
-        technicianPaidAllTime: 0,
-        technicianPaidAllTimeForProfit: 0,
         vendorPaidAllTime: 0,
         totalSalesPeriod: totalSalesPeriodSafe,
         receivedPaymentPeriod: receivedPaymentPeriodSafe,
-        rentalMachinesCountsPricePeriod: 0,
-        rentalConsumablesPricePeriod: 0,
         totalExpensesPeriod: totalExpensesPeriodSafe,
         netProfitPeriod,
-        technicianPaidPeriod: 0,
-        technicianPaidForProfitPeriod: 0,
         vendorPaidPeriod: 0,
         lowStock: Array.isArray(lowStock) ? lowStock : [],
         months,
@@ -411,10 +355,6 @@ exports.getSummary = async (req,res)=>{
         const periodEndDate = toDateOnlyText(periodEnd) || new Date(periodEnd).toISOString().slice(0, 10);
 
         const totalUsers = await User.count();
-        const totalGeneralMachines = await GeneralMachine.count({
-            include: [getGeneralCustomerInclude()]
-        });
-        const totalRentalMachines = await RentalMachine.count();
         const totalProducts = await Product.count();
         const totalCustomers = await Customer.count();
         const totalVendors = await Vendor.count();
@@ -434,25 +374,6 @@ exports.getSummary = async (req,res)=>{
                 ]
             }
         }) || 0;
-        const invoicesPeriodForProfit = await Invoice.findAll({
-            where:{
-                [Op.and]: [
-                    buildDateOnlyRangeWhere("invoice_date", periodStartDate, periodEndDate),
-                    { payment_status: getReceivedPaymentStatusFilter() }
-                ]
-            },
-            attributes:["id","total_amount","support_technician","support_technician_percentage"],
-            include: [
-                getGeneralCustomerInclude(),
-                {
-                    model: InvoiceItem,
-                    required: false,
-                    attributes: ["qty"],
-                    include: [{ model: Product, required: false, attributes: ["dealer_price"] }]
-                }
-            ]
-        });
-        const technicianPaidPeriodForProfit = sumTechnicianPaid(invoicesPeriodForProfit);
         const invoicesPeriodForCard = await Invoice.findAll({
             where:{
                 [Op.and]: [
@@ -491,33 +412,6 @@ exports.getSummary = async (req,res)=>{
         });
         const vendorPaidPeriod = sumVendorPaidFromInvoiceItems(invoiceItemsPeriod);
         const netProfitPeriod = receivedPaymentPeriod - totalExpensesPeriod - technicianPaidPeriod - vendorPaidPeriod;
-        const rentalCountsPeriodRows = await RentalMachineCount.findAll({
-            where: {
-                [Op.or]: [
-                    { entry_date: { [Op.between]: [periodStartDate, periodEndDate] } },
-                    {
-                        entry_date: { [Op.is]: null },
-                        createdAt: { [Op.between]: [periodStart, periodEnd] }
-                    }
-                ]
-            },
-            attributes: ["input_count", "updated_count"]
-        });
-        const rentalMachinesCountsPricePeriod = sumRentalCountPrice(rentalCountsPeriodRows);
-        const rentalConsumablesPeriodRows = await RentalMachineConsumable.findAll({
-            where: {
-                [Op.or]: [
-                    { entry_date: { [Op.between]: [periodStartDate, periodEndDate] } },
-                    {
-                        entry_date: { [Op.is]: null },
-                        createdAt: { [Op.between]: [periodStart, periodEnd] }
-                    }
-                ]
-            },
-            include: [{ model: Product, required: false, attributes: ["id", "dealer_price"] }],
-            attributes: ["quantity"]
-        });
-        const rentalConsumablesPricePeriod = sumRentalConsumablesPrice(rentalConsumablesPeriodRows);
 
         const totalSalesAllTime = await Invoice.sum("total_amount") || 0;
         const totalExpensesAllTime = await Expense.sum("amount") || 0;
@@ -527,22 +421,6 @@ exports.getSummary = async (req,res)=>{
                 payment_status: getReceivedPaymentStatusFilter()
             }
         }) || 0;
-        const invoicesAllTimeForProfit = await Invoice.findAll({
-            include: [
-                getGeneralCustomerInclude(),
-                {
-                    model: InvoiceItem,
-                    required: false,
-                    attributes: ["qty"],
-                    include: [{ model: Product, required: false, attributes: ["dealer_price"] }]
-                }
-            ],
-            where: {
-                payment_status: getReceivedPaymentStatusFilter()
-            },
-            attributes:["id","total_amount","support_technician","support_technician_percentage"]
-        });
-        const technicianPaidAllTimeForProfit = sumTechnicianPaid(invoicesAllTimeForProfit);
         const invoicesAllTimeForCard = await Invoice.findAll({
             where: {
                 support_technician: { [Op.not]: null }
@@ -575,15 +453,6 @@ exports.getSummary = async (req,res)=>{
         });
         const vendorPaidAllTime = sumVendorPaidFromInvoiceItems(invoiceItemsAllTime);
         const netProfitAllTime = receivedPaymentAllTime - totalExpensesAllTime - technicianPaidAllTime - vendorPaidAllTime;
-        const rentalCountsAllTimeRows = await RentalMachineCount.findAll({
-            attributes: ["input_count", "updated_count"]
-        });
-        const rentalMachinesCountsPriceAllTime = sumRentalCountPrice(rentalCountsAllTimeRows);
-        const rentalConsumablesAllTimeRows = await RentalMachineConsumable.findAll({
-            include: [{ model: Product, required: false, attributes: ["id", "dealer_price"] }],
-            attributes: ["quantity"]
-        });
-        const rentalConsumablesPriceAllTime = sumRentalConsumablesPrice(rentalConsumablesAllTimeRows);
 
                                       
         const lowStock = await Product.findAll({
@@ -656,38 +525,8 @@ exports.getSummary = async (req,res)=>{
                 attributes: ["qty"]
             });
             const monthVendorPaid = sumVendorPaidFromInvoiceItems(monthInvoiceItemsForVendor);
-            const monthRentalCountsRows = await RentalMachineCount.findAll({
-                where: {
-                    [Op.or]: [
-                        { entry_date: { [Op.between]: [startText, endText] } },
-                        {
-                            entry_date: { [Op.is]: null },
-                            createdAt: { [Op.between]: [start, end] }
-                        }
-                    ]
-                },
-                attributes: ["input_count", "updated_count"]
-            });
-            const monthRentalMachinesCountsPrice = sumRentalCountPrice(monthRentalCountsRows);
-            const monthRentalConsumablesRows = await RentalMachineConsumable.findAll({
-                where: {
-                    [Op.or]: [
-                        { entry_date: { [Op.between]: [startText, endText] } },
-                        {
-                            entry_date: { [Op.is]: null },
-                            createdAt: { [Op.between]: [start, end] }
-                        }
-                    ]
-                },
-                include: [{ model: Product, required: false, attributes: ["id", "dealer_price"] }],
-                attributes: ["quantity"]
-            });
-            const monthRentalConsumablesPrice = sumRentalConsumablesPrice(monthRentalConsumablesRows);
-
             const monthProfit =
                 toNumberSafe(monthReceivedPayment)
-                + toNumberSafe(monthRentalMachinesCountsPrice)
-                - toNumberSafe(monthRentalConsumablesPrice)
                 - toNumberSafe(monthExpenses)
                 - toNumberSafe(monthTechnicianPaid)
                 - toNumberSafe(monthVendorPaid);
@@ -698,39 +537,23 @@ exports.getSummary = async (req,res)=>{
 
         res.json({
             totalUsers,
-            totalGeneralMachines,
-            totalRentalMachines,
             totalProducts,
             totalCustomers,
             totalVendors,
             totalSales: totalSalesPeriod,
             receivedPayment: receivedPaymentPeriod,
-            rentalMachinesCountsPrice: rentalMachinesCountsPricePeriod,
-            rentalConsumablesPrice: rentalConsumablesPricePeriod,
             totalExpenses: totalExpensesPeriod,
             netProfit: netProfitPeriod,
-            technicianPaid: technicianPaidPeriod,
-            technicianPaidForProfit: technicianPaidPeriodForProfit,
             vendorPaid: vendorPaidPeriod,
             totalSalesAllTime,
             receivedPaymentAllTime,
-            rentalMachinesCountsPriceAllTime,
-            rentalMachinesCountsPriceAllInputs: rentalMachinesCountsPriceAllTime,
-            rentalConsumablesPriceAllTime,
-            rentalConsumablesPriceAllInputs: rentalConsumablesPriceAllTime,
             totalExpensesAllTime,
             netProfitAllTime,
-            technicianPaidAllTime,
-            technicianPaidAllTimeForProfit,
             vendorPaidAllTime,
             totalSalesPeriod,
             receivedPaymentPeriod,
-            rentalMachinesCountsPricePeriod,
-            rentalConsumablesPricePeriod,
             totalExpensesPeriod,
             netProfitPeriod,
-            technicianPaidPeriod,
-            technicianPaidForProfitPeriod: technicianPaidPeriodForProfit,
             vendorPaidPeriod,
             lowStock,
             months,

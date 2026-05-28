@@ -173,16 +173,11 @@ function resolveFirstAccessiblePath(paths, actions = ["view"]){
 
 function bindDashboardTileAccessLinks(){
     const tileTargets = [
-        { id: "totalMchine", permissionPath: "/dashboard/tiles/total-machines", paths: ["/products/general-machine.html"] },
-        { id: "totalRentalMachines", permissionPath: "/dashboard/tiles/total-rental-machines", paths: ["/products/machine.html"] },
         { id: "totalCustomers", permissionPath: "/dashboard/tiles/total-customers", paths: ["/customers/customer-list.html"] },
         { id: "totalProducts", permissionPath: "/dashboard/tiles/total-products", paths: ["/products/product-list.html"] },
         { id: "totalSales", permissionPath: "/dashboard/tiles/total-sales", paths: ["/reports/sales-report.html", "/invoices/invoice-list.html"] },
         { id: "receivedPayment", permissionPath: "/dashboard/tiles/received-payment", paths: ["/finance/payments.html", "/finance/finance.html"] },
-        { id: "rentalMachinesCountsPrice", permissionPath: "/dashboard/tiles/rental-machines-counts", paths: ["/products/add-rental-count.html"] },
-        { id: "rentalConsumablesPrice", permissionPath: "/dashboard/tiles/rental-consumables", paths: ["/products/add-rental-consumable.html"] },
         { id: "totalExpenses", permissionPath: "/dashboard/tiles/total-expenses", paths: ["/expenses/expense-list.html"] },
-        { id: "technicianPaid", permissionPath: "/dashboard/tiles/support-technician-pay", paths: ["/finance/finance.html"] },
         { id: "vendorPaid", permissionPath: "/dashboard/tiles/vendor-paid", paths: ["/finance/payments.html", "/finance/finance.html"] },
         { id: "netProfit", permissionPath: "/dashboard/tiles/net-profit", paths: ["/finance/finance.html"] }
     ];
@@ -660,14 +655,6 @@ async function fetchSummary(){
         if(totalUsersEl){
             totalUsersEl.querySelector("p").innerText = summary.totalUsers || 0;
         }
-        const totalMchineEl = document.getElementById("totalMchine");
-        if(totalMchineEl){
-            totalMchineEl.querySelector("p").innerText = summary.totalGeneralMachines || 0;
-        }
-        const rentalMachinesEl = document.getElementById("totalRentalMachines");
-        if(rentalMachinesEl){
-            rentalMachinesEl.querySelector("p").innerText = summary.totalRentalMachines || 0;
-        }
         const totalCustomersEl = document.getElementById("totalCustomers");
         if(totalCustomersEl){
             totalCustomersEl.querySelector("p").innerText = summary.totalCustomers || 0;
@@ -679,44 +666,22 @@ async function fetchSummary(){
                                              
         const salesVal = summary.totalSalesPeriod ?? summary.totalSales ?? 0;
         const receivedPaymentVal = summary.receivedPaymentPeriod ?? summary.receivedPayment ?? 0;
-        const rentalMachinesCountsVal = summary.rentalMachinesCountsPricePeriod
-            ?? summary.rentalMachinesCountsPrice
-            ?? summary.rentalMachinesCountsPriceAllInputs
-            ?? summary.rentalMachinesCountsPriceAllTime
-            ?? 0;
-        const rentalConsumablesVal = summary.rentalConsumablesPricePeriod
-            ?? summary.rentalConsumablesPrice
-            ?? summary.rentalConsumablesPriceAllInputs
-            ?? summary.rentalConsumablesPriceAllTime
-            ?? 0;
         const expenseVal = summary.totalExpensesPeriod ?? summary.totalExpenses ?? 0;
-        const technicianPaidVal = summary.technicianPaidPeriod ?? summary.technicianPaid ?? 0;
         const vendorPaidVal = summary.vendorPaidPeriod ?? summary.vendorPaid ?? 0;
         const profitVal =
-            Number(receivedPaymentVal || 0)
-            + Number(rentalMachinesCountsVal || 0)
-            - Number(rentalConsumablesVal || 0)
-            - Number(expenseVal || 0)
-            - Number(technicianPaidVal || 0)
-            - Number(vendorPaidVal || 0);
+            summary.netProfitPeriod
+            ?? summary.netProfit
+            ?? (
+                Number(receivedPaymentVal || 0)
+                - Number(expenseVal || 0)
+                - Number(vendorPaidVal || 0)
+            );
         document.getElementById("totalSales").querySelector("p").innerText = formatAmountWithSeparators(salesVal);
         const receivedPaymentEl = document.getElementById("receivedPayment");
         if(receivedPaymentEl){
             receivedPaymentEl.querySelector("p").innerText = formatAmountWithSeparators(receivedPaymentVal);
         }
-        const rentalMachinesCountsEl = document.getElementById("rentalMachinesCountsPrice");
-        if(rentalMachinesCountsEl){
-            rentalMachinesCountsEl.querySelector("p").innerText = formatAmountWithSeparators(rentalMachinesCountsVal);
-        }
-        const rentalConsumablesEl = document.getElementById("rentalConsumablesPrice");
-        if(rentalConsumablesEl){
-            rentalConsumablesEl.querySelector("p").innerText = formatAmountWithSeparators(rentalConsumablesVal);
-        }
         document.getElementById("totalExpenses").querySelector("p").innerText = formatAmountWithSeparators(expenseVal);
-        const technicianPaidEl = document.getElementById("technicianPaid");
-        if(technicianPaidEl){
-            technicianPaidEl.querySelector("p").innerText = formatAmountWithSeparators(technicianPaidVal);
-        }
         const vendorPaidEl = document.getElementById("vendorPaid");
         if(vendorPaidEl){
             vendorPaidEl.querySelector("p").innerText = formatAmountWithSeparators(vendorPaidVal);
