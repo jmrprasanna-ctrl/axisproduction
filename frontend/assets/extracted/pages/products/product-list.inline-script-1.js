@@ -46,7 +46,7 @@ function renderProducts(products){
             <td>${p.description}</td>
             <td>${categoryName}</td>
             <td>${p.model}</td>
-            <td>${p.selling_price}</td>
+            <td>${p.dealer_price ?? ""}</td>
             <td>${vendorName}</td>
         `;
 
