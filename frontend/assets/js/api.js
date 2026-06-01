@@ -379,7 +379,7 @@ function renderSidebarMenuByAccess(){
         { path: "/services/service-list.html", label: "Services" },
         {
             path: "/purchase/create-po.html",
-            label: "Purchase Order",
+            label: "Production",
             children: [
                 { path: "/purchase/create-po.html", label: "Create PO" }
             ]
