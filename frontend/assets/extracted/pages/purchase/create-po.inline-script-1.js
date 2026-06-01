@@ -62,6 +62,16 @@ if (savePoBtn && !canCreatePo) {
 }
 
 const MEASUREMENT_OPTIONS = ["Mg", "Grm", "Kg", "Ml", "Ltr", "MM", "CM", "Mtr"];
+const MEASUREMENT_CANONICAL_MAP = {
+    mg: "Mg",
+    grm: "Grm",
+    kg: "Kg",
+    ml: "Ml",
+    ltr: "Ltr",
+    mm: "MM",
+    cm: "CM",
+    mtr: "Mtr"
+};
 const CUSTOMER_TYPE_DEFAULT = "Silver";
 const CUSTOMER_MODE_DEFAULT = "General";
 
@@ -176,13 +186,33 @@ function syncCustomerSelectionFromInput() {
 }
 
 function buildMeasurementOptionsHtml(selectedValue) {
-    const selected = String(selectedValue || "");
+    const selected = normalizeMeasurementUnit(selectedValue);
     const rows = [`<option value="">Select</option>`];
     MEASUREMENT_OPTIONS.forEach((unit) => {
         const isSelected = unit === selected ? " selected" : "";
         rows.push(`<option value="${unit}"${isSelected}>${unit}</option>`);
     });
     return rows.join("");
+}
+
+function normalizeMeasurementUnit(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const mapped = MEASUREMENT_CANONICAL_MAP[raw.toLowerCase()];
+    return mapped || raw;
+}
+
+function ensureMeasurementOption(selectEl, measurementValue) {
+    if (!selectEl) return;
+    const unit = normalizeMeasurementUnit(measurementValue);
+    if (!unit) return;
+    const exists = Array.from(selectEl.options).some((option) => String(option.value || "") === unit);
+    if (!exists) {
+        const option = document.createElement("option");
+        option.value = unit;
+        option.textContent = unit;
+        selectEl.appendChild(option);
+    }
 }
 
 function updateRowTotal(rowEl) {
@@ -260,8 +290,10 @@ function applyProductSelectionToRow(rowEl, product) {
     if (productIdEl) {
         productIdEl.value = Number.isFinite(Number(product.id)) ? String(Number(product.id)) : "";
     }
-    if (measurementEl && !String(measurementEl.value || "").trim() && product.measurement) {
-        measurementEl.value = product.measurement;
+    const measurement = normalizeMeasurementUnit(product.measurement);
+    if (measurementEl && measurement) {
+        ensureMeasurementOption(measurementEl, measurement);
+        measurementEl.value = measurement;
     }
 }
 
@@ -321,6 +353,14 @@ function attachDescriptionLookup(inputEl, rowEl) {
     });
 
     inputEl.addEventListener("change", () => {
+        const exact = findProductByDescription(inputEl.value);
+        if (exact) {
+            inputEl.value = exact.description;
+            applyProductSelectionToRow(rowEl, exact);
+        }
+    });
+
+    inputEl.addEventListener("blur", () => {
         const exact = findProductByDescription(inputEl.value);
         if (exact) {
             inputEl.value = exact.description;
