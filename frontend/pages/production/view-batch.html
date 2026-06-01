@@ -1,0 +1,162 @@
+<!--
+  System: AXIS PRODUCTION SYSTEM
+  Owner : CRONIT SOLLUTIONS
+  Author: JMR Prasanna
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>View Batch - AXIS PRODUCTION</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+<link rel="stylesheet" href="../../assets/css/dashboard.css">
+<link rel="stylesheet" href="../../assets/extracted/pages/production/view-batch.inline-style-1.css">
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo">
+        <img src="../../assets/images/logo.png" alt="Logo">
+        <span>AXIS PRODUCTION</span>
+    </div>
+    <ul class="nav-links">
+        <li><a href="../dashboard.html">Dashboard</a></li>
+        <li><a href="../services/service-list.html">Services</a></li>
+        <li><a href="../purchase/create-po.html">Create PO</a></li>
+        <li><a href="create-batch.html">Create Batch</a></li>
+        <li><a href="batch-list.html">Batch List</a></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <header class="page-head">
+        <h2>Batch View</h2>
+        <div class="batch-head-actions">
+            <a class="icon-btn" href="batch-list.html" aria-label="Back to batch list" title="Back to batch list">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </a>
+            <button class="icon-btn" type="button" id="editBatchBtn" aria-label="Edit batch" title="Edit batch">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m4 20 4.6-1.1 10-10a1.8 1.8 0 0 0 0-2.5l-.9-.9a1.8 1.8 0 0 0-2.5 0l-10 10L4 20Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="m13.8 6.2 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button class="icon-btn" type="button" id="exportBatchPdfBtn" aria-label="Export batch PDF" title="Export batch PDF">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7.5 3.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M14 3.5V8h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M12 10.5v6M9.5 14l2.5 2.5L14.5 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <section class="batch-view-sheet">
+        <div class="batch-title-row">
+            <h3 id="companyNameText">&lt; AXIS PRODUCTION &gt;</h3>
+            <h3>BATCH CARD</h3>
+        </div>
+
+        <div class="batch-meta-grid">
+            <div class="meta-pair"><span>Batch No.</span><strong id="batchNoText">-</strong></div>
+            <div class="meta-pair"><span>PO No.</span><strong id="poNoText">-</strong></div>
+            <div class="meta-pair"><span>No.</span><strong id="sequenceNoText">-</strong></div>
+            <div class="meta-pair"><span>Date</span><strong id="batchDateText">-</strong></div>
+        </div>
+
+        <div class="batch-section">
+            <div class="section-label">Items Generated</div>
+            <div class="batch-table-wrap">
+                <table class="batch-table">
+                    <thead>
+                        <tr>
+                            <th>S.N.</th>
+                            <th>Description of Goods</th>
+                            <th>Qty.</th>
+                            <th>Unit</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="generatedBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="batch-section">
+            <div class="section-label">Items Consumed</div>
+            <div class="batch-table-wrap">
+                <table class="batch-table">
+                    <thead>
+                        <tr>
+                            <th>S.N.</th>
+                            <th>Description of Goods</th>
+                            <th>Qty.</th>
+                            <th>Unit</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="consumedBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="approval-grid">
+            <div class="approval-block">
+                <p><strong>Formula Prepared by:</strong> <span id="formulaPreparedByText"></span></p>
+                <p><strong>Warehouse Department used only</strong></p>
+                <p>Raw Materials Issued By - <span class="line-value" id="warehouseIssuedByText"></span></p>
+                <p class="mt-8"><strong>Approving Part 01</strong></p>
+                <p id="approvingPart01Text"></p>
+            </div>
+            <div class="approval-block">
+                <p><strong>Formula Reviewed by:</strong> <span id="formulaReviewedByText"></span></p>
+                <p><strong>Quality Department used only</strong></p>
+                <p>Issued RM quantity verified by - <span class="line-value" id="qualityVerifiedByText"></span></p>
+                <p class="mt-8"><strong>Approving Part 02</strong></p>
+                <p id="approvingPart02Text"></p>
+            </div>
+        </div>
+
+        <div class="final-block">
+            <div class="final-title">Final product out</div>
+            <div class="final-grid">
+                <div>25L: <span id="out25Text"></span></div>
+                <div>10L: <span id="out10Text"></span></div>
+                <div>5L: <span id="out5Text"></span></div>
+                <div>4L: <span id="out4Text"></span></div>
+                <div>1L: <span id="out1Text"></span></div>
+                <div>500ML: <span id="out500Text"></span></div>
+                <div>275L: <span id="out275Text"></span></div>
+                <div>150L: <span id="out150Text"></span></div>
+                <div>100L: <span id="out100Text"></span></div>
+                <div>Other: <span id="outOtherText"></span></div>
+            </div>
+            <div class="final-meta-grid">
+                <div>Received Production Qty: <span id="receivedQtyText"></span> L</div>
+                <div>Produced By: <span id="producedByText"></span></div>
+                <div>Final Bulk Approval: <span id="finalBulkApprovalText"></span></div>
+                <div>Final Approval Notes: <span id="finalApprovalNotesText"></span></div>
+            </div>
+        </div>
+
+        <div class="ref-images">
+            <div class="ref-box">
+                <div class="ref-title">Reference Image 01</div>
+                <img id="refImage1" alt="Reference image 01">
+            </div>
+            <div class="ref-box">
+                <div class="ref-title">Reference Image 02</div>
+                <img id="refImage2" alt="Reference image 02">
+            </div>
+        </div>
+    </section>
+</div>
+
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/batch-utils.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="../../assets/extracted/pages/production/view-batch.inline-script-1.js"></script>
+</body>
+</html>

@@ -291,7 +291,9 @@ const DASHBOARD_MENU_ENTRIES = [
         path: "/purchase/create-po.html",
         label: "Production",
         children: [
-            { path: "/purchase/create-po.html", label: "Create PO" }
+            { path: "/purchase/create-po.html", label: "Create PO" },
+            { path: "/production/create-batch.html", label: "Create Batch" },
+            { path: "/production/batch-list.html", label: "Batch List" }
         ]
     },
     {

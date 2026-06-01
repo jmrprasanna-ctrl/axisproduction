@@ -1,0 +1,73 @@
+<!--
+  System: AXIS PRODUCTION SYSTEM
+  Owner : CRONIT SOLLUTIONS
+  Author: JMR Prasanna
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Batch List - AXIS PRODUCTION</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+<link rel="stylesheet" href="../../assets/css/dashboard.css">
+<link rel="stylesheet" href="../../assets/extracted/pages/production/batch-list.inline-style-1.css">
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo">
+        <img src="../../assets/images/logo.png" alt="Logo">
+        <span>AXIS PRODUCTION</span>
+    </div>
+    <ul class="nav-links">
+        <li><a href="../dashboard.html">Dashboard</a></li>
+        <li><a href="../services/service-list.html">Services</a></li>
+        <li><a href="../purchase/create-po.html">Create PO</a></li>
+        <li><a href="create-batch.html">Create Batch</a></li>
+        <li><a href="batch-list.html">Batch List</a></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <header class="page-head">
+        <h2>Batch List</h2>
+        <a class="icon-btn" href="../dashboard.html" aria-label="Back to dashboard" title="Back to dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </header>
+
+    <div class="form-container">
+        <a class="icon-btn" href="create-batch.html" id="addBatchBtn" aria-label="Add batch" title="Add batch">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+        </a>
+        <input id="batchSearch" class="search-inline" type="text" placeholder="Search Batch Number, PO Number, Company">
+
+        <div class="card card-mt-12">
+            <table id="batchTable">
+                <thead>
+                    <tr>
+                        <th>Batch Number</th>
+                        <th>PO Number</th>
+                        <th>Date</th>
+                        <th>Company</th>
+                        <th>Items Generated</th>
+                        <th>Items Consumed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/batch-utils.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="../../assets/extracted/pages/production/batch-list.inline-script-1.js"></script>
+</body>
+</html>

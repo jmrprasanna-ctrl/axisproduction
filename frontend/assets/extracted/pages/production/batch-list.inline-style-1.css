@@ -1,0 +1,43 @@
+.page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.page-head h2 {
+    margin: 0;
+}
+
+#batchTable th:nth-child(1),
+#batchTable td:nth-child(1),
+#batchTable th:nth-child(2),
+#batchTable td:nth-child(2) {
+    white-space: nowrap;
+}
+
+#batchTable th:nth-child(7),
+#batchTable td:nth-child(7) {
+    width: 150px;
+}
+
+.batch-action-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.batch-action-row .icon-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    padding: 0;
+}
+
+.batch-row-clickable {
+    cursor: pointer;
+}
+
+.batch-row-clickable:hover {
+    background: #f7fbff;
+}

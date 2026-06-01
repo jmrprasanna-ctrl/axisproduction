@@ -1,0 +1,234 @@
+<!--
+  System: AXIS PRODUCTION SYSTEM
+  Owner : CRONIT SOLLUTIONS
+  Author: JMR Prasanna
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Batch - AXIS PRODUCTION</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+<link rel="stylesheet" href="../../assets/css/dashboard.css">
+<link rel="stylesheet" href="../../assets/extracted/pages/production/create-batch.inline-style-1.css">
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo">
+        <img src="../../assets/images/logo.png" alt="Logo">
+        <span>AXIS PRODUCTION</span>
+    </div>
+    <ul class="nav-links">
+        <li><a href="../dashboard.html">Dashboard</a></li>
+        <li><a href="../services/service-list.html">Services</a></li>
+        <li><a href="../purchase/create-po.html">Create PO</a></li>
+        <li><a href="create-batch.html">Create Batch</a></li>
+        <li><a href="batch-list.html">Batch List</a></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <header class="page-head">
+        <h2>Edit Batch</h2>
+        <a class="icon-btn" href="batch-list.html" aria-label="Back to batch list" title="Back to batch list">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+    </header>
+
+    <div class="form-container batch-shell">
+        <form id="batchForm">
+            <div class="batch-head-actions">
+                <a class="icon-btn" href="batch-list.html" aria-label="Open batch list" title="Open batch list">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                </a>
+                <button class="icon-btn" type="button" id="openBatchViewBtn" aria-label="View batch" title="View batch">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                    </svg>
+                </button>
+                <button class="icon-btn" type="button" id="exportBatchPdfBtn" aria-label="Export batch PDF" title="Export batch PDF">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7.5 3.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M14 3.5V8h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M12 10.5v6M9.5 14l2.5 2.5L14.5 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="icon-btn" type="submit" id="saveBatchBtn" aria-label="Save batch" title="Save batch">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5.5 3.5h11l2 2V20.5H5.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M8 3.5v5h7v-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M8 14h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="batch-grid">
+                <div class="field">
+                    <label for="companyName">Company Name</label>
+                    <input type="text" id="companyName">
+                </div>
+                <div class="field">
+                    <label for="poNumber">PO Number</label>
+                    <input type="text" id="poNumber" list="poNumberOptions" placeholder="Select PO Number">
+                    <datalist id="poNumberOptions"></datalist>
+                </div>
+                <div class="field">
+                    <label for="batchNumber">Batch Number</label>
+                    <input type="text" id="batchNumber" readonly>
+                </div>
+                <div class="field">
+                    <label for="batchDate">Date</label>
+                    <input type="date" id="batchDate" required>
+                </div>
+                <div class="field">
+                    <label for="formulaPreparedBy">Formula Prepared By</label>
+                    <input type="text" id="formulaPreparedBy">
+                </div>
+                <div class="field">
+                    <label for="formulaReviewedBy">Formula Reviewed By</label>
+                    <input type="text" id="formulaReviewedBy">
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-head">
+                    <h3>Items Generated</h3>
+                    <button type="button" class="icon-btn" id="addGeneratedRowBtn" aria-label="Add generated item" title="Add generated item">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="table-wrap">
+                    <table class="batch-table">
+                        <thead>
+                            <tr>
+                                <th>S.N.</th>
+                                <th>Description of Goods</th>
+                                <th>Qty.</th>
+                                <th>Unit</th>
+                                <th>Remarks</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="generatedItemsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-head">
+                    <h3>Items Consumed</h3>
+                    <button type="button" class="icon-btn" id="addConsumedRowBtn" aria-label="Add consumed item" title="Add consumed item">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="table-wrap">
+                    <table class="batch-table">
+                        <thead>
+                            <tr>
+                                <th>S.N.</th>
+                                <th>Description of Goods</th>
+                                <th>Qty.</th>
+                                <th>Unit</th>
+                                <th>Remarks</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="consumedItemsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="batch-grid">
+                <div class="field">
+                    <label for="warehouseIssuedBy">Warehouse Issued By</label>
+                    <input type="text" id="warehouseIssuedBy">
+                </div>
+                <div class="field">
+                    <label for="qualityVerifiedBy">Quality Verified By</label>
+                    <input type="text" id="qualityVerifiedBy">
+                </div>
+                <div class="field field-span-2">
+                    <label for="approvingPart01">Approving Part 01</label>
+                    <textarea id="approvingPart01" rows="2"></textarea>
+                </div>
+                <div class="field field-span-2">
+                    <label for="approvingPart02">Approving Part 02</label>
+                    <textarea id="approvingPart02" rows="2"></textarea>
+                </div>
+                <div class="field">
+                    <label for="finalBulkApproval">Final Bulk Approval</label>
+                    <select id="finalBulkApproval">
+                        <option value="">Select</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="OK">OK</option>
+                        <option value="Not OK">Not OK</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="producedBy">Produced By</label>
+                    <input type="text" id="producedBy">
+                </div>
+            </div>
+
+            <div class="section-card">
+                <h3>Final Product Out</h3>
+                <div class="final-grid">
+                    <label>25L <input type="number" id="out25" min="0" step="0.01"></label>
+                    <label>10L <input type="number" id="out10" min="0" step="0.01"></label>
+                    <label>5L <input type="number" id="out5" min="0" step="0.01"></label>
+                    <label>4L <input type="number" id="out4" min="0" step="0.01"></label>
+                    <label>1L <input type="number" id="out1" min="0" step="0.01"></label>
+                    <label>500ML <input type="number" id="out500" min="0" step="0.01"></label>
+                    <label>275L <input type="number" id="out275" min="0" step="0.01"></label>
+                    <label>150L <input type="number" id="out150" min="0" step="0.01"></label>
+                    <label>100L <input type="number" id="out100" min="0" step="0.01"></label>
+                    <label>Other <input type="number" id="outOther" min="0" step="0.01"></label>
+                </div>
+                <div class="batch-grid mg-top-10">
+                    <div class="field">
+                        <label for="receivedProductionQty">Received Production Qty (L)</label>
+                        <input type="number" id="receivedProductionQty" min="0" step="0.01">
+                    </div>
+                    <div class="field field-span-2">
+                        <label for="finalApprovalNotes">Final Approval Notes</label>
+                        <textarea id="finalApprovalNotes" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <h3>Reference Images</h3>
+                <div class="image-grid">
+                    <div class="image-box">
+                        <label for="referenceImage1">Reference Image 01</label>
+                        <input type="file" id="referenceImage1" accept="image/*">
+                        <img id="referenceImage1Preview" alt="Reference image 01 preview">
+                    </div>
+                    <div class="image-box">
+                        <label for="referenceImage2">Reference Image 02</label>
+                        <input type="file" id="referenceImage2" accept="image/*">
+                        <img id="referenceImage2Preview" alt="Reference image 02 preview">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="../../assets/js/api.js"></script>
+<script src="../../assets/js/batch-utils.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="../../assets/extracted/pages/production/edit-batch.inline-script-1.js"></script>
+</body>
+</html>

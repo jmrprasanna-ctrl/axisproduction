@@ -631,6 +631,84 @@ END $$;
 CREATE INDEX IF NOT EXISTS purchase_order_items_po_idx ON purchase_order_items(purchase_order_id);
 CREATE INDEX IF NOT EXISTS purchase_order_items_product_idx ON purchase_order_items(product_id);
 
+CREATE TABLE IF NOT EXISTS batch_cards (
+    id SERIAL PRIMARY KEY,
+    po_number VARCHAR(40),
+    batch_number VARCHAR(40) NOT NULL,
+    sequence_no INTEGER NOT NULL DEFAULT 1,
+    company_name VARCHAR(200) NOT NULL DEFAULT 'AXIS PRODUCTION',
+    batch_date DATE NOT NULL,
+    items_generated JSONB NOT NULL DEFAULT '[]'::jsonb,
+    items_consumed JSONB NOT NULL DEFAULT '[]'::jsonb,
+    warehouse_issued_by VARCHAR(150),
+    quality_verified_by VARCHAR(150),
+    formula_prepared_by VARCHAR(150),
+    formula_reviewed_by VARCHAR(150),
+    approving_part_01 TEXT,
+    approving_part_02 TEXT,
+    final_bulk_approval VARCHAR(40),
+    final_product_out JSONB NOT NULL DEFAULT '{}'::jsonb,
+    received_production_qty DOUBLE PRECISION NOT NULL DEFAULT 0,
+    produced_by VARCHAR(150),
+    final_approval_notes TEXT,
+    reference_image_1_path VARCHAR(500),
+    reference_image_2_path VARCHAR(500),
+    created_by INT,
+    updated_by INT,
+    "createdAt" TIMESTAMP DEFAULT NOW(),
+    "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS po_number VARCHAR(40);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS batch_number VARCHAR(40);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS sequence_no INTEGER DEFAULT 1;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS company_name VARCHAR(200) DEFAULT 'AXIS PRODUCTION';
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS batch_date DATE;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS items_generated JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS items_consumed JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS warehouse_issued_by VARCHAR(150);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS quality_verified_by VARCHAR(150);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS formula_prepared_by VARCHAR(150);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS formula_reviewed_by VARCHAR(150);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS approving_part_01 TEXT;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS approving_part_02 TEXT;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS final_bulk_approval VARCHAR(40);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS final_product_out JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS received_production_qty DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS produced_by VARCHAR(150);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS final_approval_notes TEXT;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS reference_image_1_path VARCHAR(500);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS reference_image_2_path VARCHAR(500);
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS created_by INT;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS updated_by INT;
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW();
+ALTER TABLE batch_cards ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW();
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'batch_cards_batch_number_unique'
+    ) THEN
+        ALTER TABLE batch_cards
+        ADD CONSTRAINT batch_cards_batch_number_unique UNIQUE (batch_number);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'batch_cards_date_sequence_unique'
+    ) THEN
+        ALTER TABLE batch_cards
+        ADD CONSTRAINT batch_cards_date_sequence_unique UNIQUE (batch_date, sequence_no);
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS batch_cards_date_idx ON batch_cards(batch_date);
+CREATE INDEX IF NOT EXISTS batch_cards_number_idx ON batch_cards(batch_number);
+
                              
            
                              

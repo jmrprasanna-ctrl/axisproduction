@@ -6,6 +6,7 @@
 DROP TABLE IF EXISTS invoice_items CASCADE;
 DROP TABLE IF EXISTS invoices CASCADE;
 DROP TABLE IF EXISTS purchase_order_items CASCADE;
+DROP TABLE IF EXISTS batch_cards CASCADE;
 DROP TABLE IF EXISTS purchase_orders CASCADE;
 DROP TABLE IF EXISTS rental_machine_consumables CASCADE;
 DROP TABLE IF EXISTS general_machines CASCADE;
@@ -161,6 +162,37 @@ CREATE TABLE purchase_order_items (
 );
 CREATE INDEX IF NOT EXISTS purchase_order_items_po_idx ON purchase_order_items(purchase_order_id);
 CREATE INDEX IF NOT EXISTS purchase_order_items_product_idx ON purchase_order_items(product_id);
+
+CREATE TABLE batch_cards (
+    id SERIAL PRIMARY KEY,
+    po_number VARCHAR(40),
+    batch_number VARCHAR(40) NOT NULL UNIQUE,
+    sequence_no INTEGER NOT NULL DEFAULT 1,
+    company_name VARCHAR(200) NOT NULL DEFAULT 'AXIS PRODUCTION',
+    batch_date DATE NOT NULL,
+    items_generated JSONB NOT NULL DEFAULT '[]'::jsonb,
+    items_consumed JSONB NOT NULL DEFAULT '[]'::jsonb,
+    warehouse_issued_by VARCHAR(150),
+    quality_verified_by VARCHAR(150),
+    formula_prepared_by VARCHAR(150),
+    formula_reviewed_by VARCHAR(150),
+    approving_part_01 TEXT,
+    approving_part_02 TEXT,
+    final_bulk_approval VARCHAR(40),
+    final_product_out JSONB NOT NULL DEFAULT '{}'::jsonb,
+    received_production_qty DOUBLE PRECISION NOT NULL DEFAULT 0,
+    produced_by VARCHAR(150),
+    final_approval_notes TEXT,
+    reference_image_1_path VARCHAR(500),
+    reference_image_2_path VARCHAR(500),
+    created_by INTEGER,
+    updated_by INTEGER,
+    "createdAt" TIMESTAMP DEFAULT NOW(),
+    "updatedAt" TIMESTAMP DEFAULT NOW(),
+    UNIQUE (batch_date, sequence_no)
+);
+CREATE INDEX IF NOT EXISTS batch_cards_date_idx ON batch_cards(batch_date);
+CREATE INDEX IF NOT EXISTS batch_cards_number_idx ON batch_cards(batch_number);
 
 
                              

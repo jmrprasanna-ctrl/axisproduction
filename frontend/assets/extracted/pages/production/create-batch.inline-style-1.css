@@ -1,0 +1,254 @@
+.batch-shell {
+    max-width: 1280px;
+}
+
+.page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.page-head h2 {
+    margin: 0;
+}
+
+.batch-head-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.batch-head-actions .icon-btn {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+}
+
+.batch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e3f5e;
+}
+
+.field input,
+.field select,
+.field textarea {
+    width: 100%;
+    border: 1px solid #c9d8e6;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #102841;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.field input,
+.field select {
+    height: 44px;
+}
+
+.field textarea {
+    resize: vertical;
+    min-height: 84px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+    outline: none;
+    border-color: #2a76c6;
+    box-shadow: 0 0 0 3px rgba(42, 118, 198, 0.14);
+}
+
+.field input[readonly] {
+    background: #eef4fa;
+    color: #33516d;
+    font-weight: 700;
+}
+
+.field-span-2 {
+    grid-column: span 2;
+}
+
+.section-card {
+    margin-bottom: 14px;
+    border: 1px solid #d6e2ee;
+    border-radius: 12px;
+    background: #fff;
+    padding: 12px;
+}
+
+.section-card h3 {
+    margin: 0 0 10px 0;
+    color: #143a5d;
+    font-size: 21px;
+}
+
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.section-head h3 {
+    margin: 0;
+}
+
+.section-head .icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+}
+
+.table-wrap {
+    border: 1px solid #d6e2ee;
+    border-radius: 10px;
+    overflow: auto;
+}
+
+.batch-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 860px;
+}
+
+.batch-table th,
+.batch-table td {
+    border-bottom: 1px solid #e4edf5;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.batch-table th {
+    color: #1f4364;
+    font-size: 13px;
+    font-weight: 700;
+    background: #f4f9ff;
+}
+
+.batch-table td:first-child,
+.batch-table th:first-child {
+    width: 46px;
+}
+
+.batch-table td:last-child,
+.batch-table th:last-child {
+    width: 70px;
+}
+
+.batch-table input,
+.batch-table select {
+    width: 100%;
+    height: 36px;
+    border: 1px solid #c7d6e7;
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.batch-table .row-remove-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+}
+
+.final-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.final-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e3f5e;
+}
+
+.final-grid input {
+    border: 1px solid #c7d6e7;
+    border-radius: 8px;
+    padding: 8px 9px;
+    font-size: 13px;
+}
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.image-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.image-box label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e3f5e;
+}
+
+.image-box img {
+    width: 100%;
+    min-height: 220px;
+    max-height: 340px;
+    object-fit: contain;
+    border: 1px solid #d6e2ee;
+    border-radius: 10px;
+    background: #f7fafc;
+}
+
+.mg-top-10 {
+    margin-top: 10px;
+}
+
+@media (max-width: 1100px) {
+    .batch-grid {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+
+    .final-grid {
+        grid-template-columns: repeat(3, minmax(120px, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    .batch-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .field-span-2 {
+        grid-column: span 1;
+    }
+
+    .image-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .final-grid {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+    }
+}

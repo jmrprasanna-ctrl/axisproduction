@@ -180,9 +180,13 @@ const ACCESS_MODULE_OPTIONS = [
     ],
   },
   {
-    module: "Purchase Order",
+    module: "Production",
     items: [
       { path: "/purchase/create-po.html", label: "Create PO", actions: ["view", "add"] },
+      { path: "/production/create-batch.html", label: "Create Batch", actions: ["view", "add"] },
+      { path: "/production/batch-list.html", label: "Batch List", actions: ["view", "add", "edit", "delete"] },
+      { path: "/production/edit-batch.html", label: "Edit Batch", actions: ["view", "edit"] },
+      { path: "/production/view-batch.html", label: "View Batch", actions: ["view"] },
     ],
   },
   {
