@@ -24,9 +24,10 @@ if (!canViewBatch) {
 }
 
 const params = new URLSearchParams(window.location.search);
-const batchId = Number(params.get("id") || 0);
-if (!Number.isFinite(batchId) || batchId <= 0) {
-    alert("Invalid batch id.");
+const batchNumberParam = String(params.get("batch") || "").trim();
+const legacyBatchId = Number(params.get("id") || 0);
+if (!batchNumberParam && (!Number.isFinite(legacyBatchId) || legacyBatchId <= 0)) {
+    alert("Invalid batch reference.");
     window.location.href = "batch-list.html";
 }
 
@@ -151,13 +152,21 @@ function fillBatch(data) {
 }
 
 async function loadBatch() {
-    const row = await request(`/batches/${batchId}`, "GET");
+    const endpoint = batchNumberParam
+        ? `/batches/by-batch/${encodeURIComponent(batchNumberParam)}`
+        : `/batches/${legacyBatchId}`;
+    const row = await request(endpoint, "GET");
     fillBatch(row);
 }
 
 editBatchBtnEl.addEventListener("click", () => {
     if (!canEditBatch) return;
-    window.location.href = `edit-batch.html?id=${batchId}`;
+    const batchNumber = String(loadedBatch?.batch_number || batchNumberParam || "").trim();
+    if (!batchNumber) {
+        alert("Batch number is missing.");
+        return;
+    }
+    window.location.href = `edit-batch.html?batch=${encodeURIComponent(batchNumber)}`;
 });
 
 exportBatchPdfBtnEl.addEventListener("click", () => {

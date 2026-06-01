@@ -23,7 +23,6 @@
         <li><a href="../dashboard.html">Dashboard</a></li>
         <li><a href="../services/service-list.html">Services</a></li>
         <li><a href="../purchase/create-po.html">Create PO</a></li>
-        <li><a href="create-batch.html">Create Batch</a></li>
         <li><a href="batch-list.html">Batch List</a></li>
     </ul>
 </div>
@@ -39,12 +38,7 @@
     </header>
 
     <div class="form-container">
-        <a class="icon-btn" href="create-batch.html" id="addBatchBtn" aria-label="Add batch" title="Add batch">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-        </a>
-        <input id="batchSearch" class="search-inline" type="text" placeholder="Search Batch Number, PO Number, Company">
+        <input id="batchSearch" class="search-inline" type="text" placeholder="Search Batch Number, PO Number, Customer">
 
         <div class="card card-mt-12">
             <table id="batchTable">
@@ -53,7 +47,7 @@
                         <th>Batch Number</th>
                         <th>PO Number</th>
                         <th>Date</th>
-                        <th>Company</th>
+                        <th>Customer</th>
                         <th>Items Generated</th>
                         <th>Items Consumed</th>
                         <th>Actions</th>

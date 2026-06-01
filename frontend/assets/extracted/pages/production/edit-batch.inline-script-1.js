@@ -28,9 +28,10 @@ if (!canViewBatchEdit) {
 }
 
 const params = new URLSearchParams(window.location.search);
-const batchId = Number(params.get("id") || 0);
-if (!Number.isFinite(batchId) || batchId <= 0) {
-    alert("Invalid batch id.");
+const batchNumberParam = String(params.get("batch") || "").trim();
+const legacyBatchId = Number(params.get("id") || 0);
+if (!batchNumberParam && (!Number.isFinite(legacyBatchId) || legacyBatchId <= 0)) {
+    alert("Invalid batch reference.");
     window.location.href = "batch-list.html";
 }
 
@@ -220,6 +221,13 @@ function collectBatchPayload() {
     };
 }
 
+function getBatchEndpoint() {
+    if (batchNumberParam) {
+        return `/batches/by-batch/${encodeURIComponent(batchNumberParam)}`;
+    }
+    return `/batches/${legacyBatchId}`;
+}
+
 function fillForm(data) {
     loadedBatch = data;
     companyNameEl.value = data.company_name || "AXIS PRODUCTION";
@@ -261,7 +269,7 @@ function fillForm(data) {
 }
 
 async function loadBatch() {
-    const row = await request(`/batches/${batchId}`, "GET");
+    const row = await request(getBatchEndpoint(), "GET");
     fillForm(row);
 }
 
@@ -277,7 +285,7 @@ batchFormEl.addEventListener("submit", async (event) => {
         return;
     }
     try {
-        const updated = await request(`/batches/${batchId}`, "PUT", payload);
+        const updated = await request(getBatchEndpoint(), "PUT", payload);
         fillForm(updated);
         imageState.ref1 = { base64: "", fileName: "" };
         imageState.ref2 = { base64: "", fileName: "" };
@@ -290,7 +298,12 @@ batchFormEl.addEventListener("submit", async (event) => {
 });
 
 openBatchViewBtn.addEventListener("click", () => {
-    window.location.href = `view-batch.html?id=${batchId}`;
+    const batchNumber = String(loadedBatch?.batch_number || batchNumberParam || "").trim();
+    if (!batchNumber) {
+        alert("Batch number is missing.");
+        return;
+    }
+    window.location.href = `view-batch.html?batch=${encodeURIComponent(batchNumber)}`;
 });
 
 exportBatchPdfBtn.addEventListener("click", () => {

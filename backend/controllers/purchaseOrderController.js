@@ -246,3 +246,30 @@ exports.createPurchaseOrder = async (req, res) => {
         return res.status(500).json({ message: err.message || "Failed to create purchase order." });
     }
 };
+
+exports.listPurchaseOrders = async (req, res) => {
+    try {
+        const q = String(req.query?.q || "").trim();
+        const where = {};
+        if (q) {
+            where[Op.or] = [
+                { po_number: { [Op.iLike]: `%${q}%` } },
+                { batch_number: { [Op.iLike]: `%${q}%` } },
+                { customer_name: { [Op.iLike]: `%${q}%` } },
+            ];
+        }
+
+        const rows = await PurchaseOrder.findAll({
+            where,
+            include: [
+                { model: Customer, attributes: ["id", "customer_id", "name"] },
+                { model: PurchaseOrderItem, include: [{ model: Product, attributes: ["id", "product_id", "description", "measurement"] }] },
+            ],
+            order: [["po_date", "DESC"], ["id", "DESC"]],
+        });
+
+        return res.json(rows);
+    } catch (err) {
+        return res.status(500).json({ message: err.message || "Failed to load purchase orders." });
+    }
+};

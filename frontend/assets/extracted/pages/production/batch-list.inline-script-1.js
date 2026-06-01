@@ -9,20 +9,10 @@ const canViewBatchList = canManage
     : (role === "user" && typeof hasUserActionPermission === "function"
         ? hasUserActionPermission("/production/batch-list.html", "view")
         : false);
-const canAddBatch = canManage
-    ? true
-    : (role === "user" && typeof hasUserActionPermission === "function"
-        ? (hasUserActionPermission("/production/create-batch.html", "add") || hasUserActionPermission("/production/batch-list.html", "add"))
-        : false);
 const canEditBatch = canManage
     ? true
     : (role === "user" && typeof hasUserActionPermission === "function"
         ? (hasUserActionPermission("/production/edit-batch.html", "edit") || hasUserActionPermission("/production/batch-list.html", "edit"))
-        : false);
-const canDeleteBatch = canManage
-    ? true
-    : (role === "user" && typeof hasUserActionPermission === "function"
-        ? hasUserActionPermission("/production/batch-list.html", "delete")
         : false);
 
 if (!localStorage.getItem("token")) {
@@ -33,13 +23,21 @@ if (!canViewBatchList) {
     window.location.href = "../dashboard.html";
 }
 
-const addBatchBtn = document.getElementById("addBatchBtn");
 const batchSearchEl = document.getElementById("batchSearch");
 const batchTableBodyEl = document.querySelector("#batchTable tbody");
 let allBatches = [];
 
-if (!canAddBatch && addBatchBtn) {
-    addBatchBtn.style.display = "none";
+function openView(batchNumber) {
+    const key = String(batchNumber || "").trim();
+    if (!key) return;
+    window.location.href = `view-batch.html?batch=${encodeURIComponent(key)}`;
+}
+
+function openEdit(batchNumber) {
+    if (!canEditBatch) return;
+    const key = String(batchNumber || "").trim();
+    if (!key) return;
+    window.location.href = `edit-batch.html?batch=${encodeURIComponent(key)}`;
 }
 
 function renderRows(rows) {
@@ -48,14 +46,13 @@ function renderRows(rows) {
     list.forEach((row) => {
         const generatedCount = Array.isArray(row.items_generated) ? row.items_generated.length : 0;
         const consumedCount = Array.isArray(row.items_consumed) ? row.items_consumed.length : 0;
-
         const tr = document.createElement("tr");
         if (canEditBatch) tr.classList.add("batch-row-clickable");
         tr.innerHTML = `
-            <td>${row.batch_number || ""}</td>
-            <td>${row.po_number || ""}</td>
+            <td>${String(row.batch_number || "")}</td>
+            <td>${String(row.po_number || "")}</td>
             <td>${window.batchUi ? window.batchUi.formatDate(row.batch_date) : (row.batch_date || "")}</td>
-            <td>${row.company_name || ""}</td>
+            <td>${String(row.customer_name || row.company_name || "")}</td>
             <td>${generatedCount}</td>
             <td>${consumedCount}</td>
             <td>
@@ -73,26 +70,16 @@ function renderRows(rows) {
                             <path d="M12 10.5v6M9.5 14l2.5 2.5L14.5 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
-                    ${canDeleteBatch ? `
-                    <button class="icon-btn batch-delete-btn" type="button" title="Delete batch" aria-label="Delete batch">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M7 6h10M9 6v-1.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V6M8 6v13h8V6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M10.5 10v5M13.5 10v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                    </button>` : ""}
                 </div>
             </td>
         `;
 
-        const viewBtn = tr.querySelector(".batch-view-btn");
-        const pdfBtn = tr.querySelector(".batch-pdf-btn");
-        const deleteBtn = tr.querySelector(".batch-delete-btn");
-
-        viewBtn.addEventListener("click", (event) => {
+        tr.querySelector(".batch-view-btn").addEventListener("click", (event) => {
             event.stopPropagation();
-            window.location.href = `view-batch.html?id=${row.id}`;
+            openView(row.batch_number);
         });
-        pdfBtn.addEventListener("click", (event) => {
+
+        tr.querySelector(".batch-pdf-btn").addEventListener("click", (event) => {
             event.stopPropagation();
             try {
                 if (window.batchUi) window.batchUi.buildBatchPdf(row);
@@ -101,24 +88,10 @@ function renderRows(rows) {
             }
         });
 
-        if (deleteBtn) {
-            deleteBtn.addEventListener("click", async (event) => {
-                event.stopPropagation();
-                if (!confirm(`Delete ${row.batch_number || "this batch"}?`)) return;
-                try {
-                    await request(`/batches/${row.id}`, "DELETE");
-                    showMessageBox("Batch deleted successfully.");
-                    await loadBatches();
-                } catch (err) {
-                    alert(err.message || "Failed to delete batch.");
-                }
-            });
-        }
-
         if (canEditBatch) {
             tr.addEventListener("click", (event) => {
                 if (event.target.closest("button,a,input,select,textarea,.batch-action-row")) return;
-                window.location.href = `edit-batch.html?id=${row.id}`;
+                openEdit(row.batch_number);
             });
         }
 
@@ -133,7 +106,7 @@ function applySearch() {
         return;
     }
     const filtered = allBatches.filter((row) => {
-        const fields = [row.batch_number, row.po_number, row.company_name, row.batch_date];
+        const fields = [row.batch_number, row.po_number, row.customer_name, row.company_name, row.batch_date];
         return fields.some((field) => String(field || "").toLowerCase().includes(token));
     });
     renderRows(filtered);
