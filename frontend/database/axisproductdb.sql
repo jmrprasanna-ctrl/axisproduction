@@ -504,6 +504,134 @@ BEGIN
 END $$;
 
                              
+                   
+                             
+CREATE TABLE IF NOT EXISTS purchase_orders (
+    id SERIAL PRIMARY KEY,
+    po_number VARCHAR(30) NOT NULL,
+    batch_number VARCHAR(30) NOT NULL,
+    sequence_no INTEGER NOT NULL DEFAULT 1,
+    po_date DATE NOT NULL,
+    delivery_date DATE,
+    customer_id INT,
+    customer_name VARCHAR(150) NOT NULL,
+    notes TEXT,
+    grand_total DOUBLE PRECISION DEFAULT 0,
+    "createdAt" TIMESTAMP DEFAULT NOW(),
+    "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS po_number VARCHAR(30);
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS batch_number VARCHAR(30);
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS sequence_no INTEGER DEFAULT 1;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS po_date DATE;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS delivery_date DATE;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS customer_id INT;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150);
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS grand_total DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW();
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW();
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'purchase_orders_po_number_unique'
+    ) THEN
+        ALTER TABLE purchase_orders
+        ADD CONSTRAINT purchase_orders_po_number_unique UNIQUE (po_number);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'purchase_orders_batch_number_unique'
+    ) THEN
+        ALTER TABLE purchase_orders
+        ADD CONSTRAINT purchase_orders_batch_number_unique UNIQUE (batch_number);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'purchase_orders_date_sequence_unique'
+    ) THEN
+        ALTER TABLE purchase_orders
+        ADD CONSTRAINT purchase_orders_date_sequence_unique UNIQUE (po_date, sequence_no);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'purchase_orders_customer_fk'
+    ) THEN
+        ALTER TABLE purchase_orders
+        ADD CONSTRAINT purchase_orders_customer_fk
+        FOREIGN KEY (customer_id) REFERENCES customers(id);
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS purchase_orders_po_date_idx ON purchase_orders(po_date);
+CREATE INDEX IF NOT EXISTS purchase_orders_customer_idx ON purchase_orders(customer_id);
+
+CREATE TABLE IF NOT EXISTS purchase_order_items (
+    id SERIAL PRIMARY KEY,
+    purchase_order_id INT NOT NULL,
+    product_id INT,
+    description VARCHAR(255) NOT NULL,
+    measurement VARCHAR(20),
+    qty DOUBLE PRECISION DEFAULT 0,
+    unit_price DOUBLE PRECISION DEFAULT 0,
+    line_total DOUBLE PRECISION DEFAULT 0,
+    "createdAt" TIMESTAMP DEFAULT NOW(),
+    "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS purchase_order_id INT;
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS product_id INT;
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS description VARCHAR(255);
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS measurement VARCHAR(20);
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS qty DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS unit_price DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS line_total DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW();
+ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW();
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'purchase_order_items_po_fk'
+    ) THEN
+        ALTER TABLE purchase_order_items
+        ADD CONSTRAINT purchase_order_items_po_fk
+        FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'purchase_order_items_product_fk'
+    ) THEN
+        ALTER TABLE purchase_order_items
+        ADD CONSTRAINT purchase_order_items_product_fk
+        FOREIGN KEY (product_id) REFERENCES products(id);
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS purchase_order_items_po_idx ON purchase_order_items(purchase_order_id);
+CREATE INDEX IF NOT EXISTS purchase_order_items_product_idx ON purchase_order_items(product_id);
+
+                             
            
                              
 CREATE TABLE IF NOT EXISTS invoices (

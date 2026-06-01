@@ -5,6 +5,8 @@
                             
 DROP TABLE IF EXISTS invoice_items CASCADE;
 DROP TABLE IF EXISTS invoices CASCADE;
+DROP TABLE IF EXISTS purchase_order_items CASCADE;
+DROP TABLE IF EXISTS purchase_orders CASCADE;
 DROP TABLE IF EXISTS rental_machine_consumables CASCADE;
 DROP TABLE IF EXISTS general_machines CASCADE;
 DROP TABLE IF EXISTS rental_machines CASCADE;
@@ -123,6 +125,42 @@ CREATE TABLE customers (
     createdAt TIMESTAMP DEFAULT NOW(),
     updatedAt TIMESTAMP DEFAULT NOW()
 );
+
+                             
+                          
+                             
+CREATE TABLE purchase_orders (
+    id SERIAL PRIMARY KEY,
+    po_number VARCHAR(30) NOT NULL UNIQUE,
+    batch_number VARCHAR(30) NOT NULL UNIQUE,
+    sequence_no INTEGER NOT NULL DEFAULT 1,
+    po_date DATE NOT NULL,
+    delivery_date DATE,
+    customer_id INT REFERENCES customers(id),
+    customer_name VARCHAR(150) NOT NULL,
+    notes TEXT,
+    grand_total DOUBLE PRECISION DEFAULT 0,
+    "createdAt" TIMESTAMP DEFAULT NOW(),
+    "updatedAt" TIMESTAMP DEFAULT NOW(),
+    UNIQUE (po_date, sequence_no)
+);
+CREATE INDEX IF NOT EXISTS purchase_orders_po_date_idx ON purchase_orders(po_date);
+CREATE INDEX IF NOT EXISTS purchase_orders_customer_idx ON purchase_orders(customer_id);
+
+CREATE TABLE purchase_order_items (
+    id SERIAL PRIMARY KEY,
+    purchase_order_id INT NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    product_id INT REFERENCES products(id),
+    description VARCHAR(255) NOT NULL,
+    measurement VARCHAR(20),
+    qty DOUBLE PRECISION DEFAULT 0,
+    unit_price DOUBLE PRECISION DEFAULT 0,
+    line_total DOUBLE PRECISION DEFAULT 0,
+    "createdAt" TIMESTAMP DEFAULT NOW(),
+    "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS purchase_order_items_po_idx ON purchase_order_items(purchase_order_id);
+CREATE INDEX IF NOT EXISTS purchase_order_items_product_idx ON purchase_order_items(product_id);
 
 
                              

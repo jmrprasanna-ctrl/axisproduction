@@ -33,6 +33,8 @@ const UiSetting = require("./models/UiSetting");
 const EmailSetup = require("./models/EmailSetup");
 const UserAccess = require("./models/UserAccess");
 const UserLoginLog = require("./models/UserLoginLog");
+const PurchaseOrder = require("./models/PurchaseOrder");
+const PurchaseOrderItem = require("./models/PurchaseOrderItem");
 
          
 const dashboardRoutes = require("./routes/dashboardRoutes");
@@ -53,6 +55,7 @@ const rentalMachineRoutes = require("./routes/rentalMachineRoutes");
 const generalMachineRoutes = require("./routes/generalMachineRoutes");
 const supportTechPayRoutes = require("./routes/supportTechPayRoutes");
 const serviceRecordRoutes = require("./routes/serviceRecordRoutes");
+const purchaseOrderRoutes = require("./routes/purchaseOrderRoutes");
 const categoryModelOptionRoutes = require("./routes/categoryModelOptionRoutes");
 const uiSettingsRoutes = require("./routes/uiSettingsRoutes");
 const emailSetupRoutes = require("./routes/emailSetupRoutes");
@@ -900,6 +903,103 @@ async function ensureProductRowSchema() {
   });
 }
 
+async function ensurePurchaseOrderSchema() {
+  await runOnBusinessDatabases(async () => {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS purchase_orders (
+        id SERIAL PRIMARY KEY,
+        po_number VARCHAR(30) NOT NULL,
+        batch_number VARCHAR(30) NOT NULL,
+        sequence_no INTEGER NOT NULL DEFAULT 1,
+        po_date DATE NOT NULL,
+        delivery_date DATE,
+        customer_id INTEGER REFERENCES customers(id),
+        customer_name VARCHAR(150) NOT NULL,
+        notes TEXT,
+        grand_total DOUBLE PRECISION DEFAULT 0,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS po_number VARCHAR(30);`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS batch_number VARCHAR(30);`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS sequence_no INTEGER DEFAULT 1;`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS po_date DATE;`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS delivery_date DATE;`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS customer_id INTEGER;`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150);`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS notes TEXT;`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS grand_total DOUBLE PRECISION DEFAULT 0;`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW();`);
+    await db.query(`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW();`);
+
+    await db.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'purchase_orders_po_number_unique'
+        ) THEN
+          ALTER TABLE purchase_orders
+          ADD CONSTRAINT purchase_orders_po_number_unique UNIQUE (po_number);
+        END IF;
+      END $$;
+    `);
+    await db.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'purchase_orders_batch_number_unique'
+        ) THEN
+          ALTER TABLE purchase_orders
+          ADD CONSTRAINT purchase_orders_batch_number_unique UNIQUE (batch_number);
+        END IF;
+      END $$;
+    `);
+    await db.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'purchase_orders_date_sequence_unique'
+        ) THEN
+          ALTER TABLE purchase_orders
+          ADD CONSTRAINT purchase_orders_date_sequence_unique UNIQUE (po_date, sequence_no);
+        END IF;
+      END $$;
+    `);
+    await db.query(`CREATE INDEX IF NOT EXISTS purchase_orders_po_date_idx ON purchase_orders(po_date);`);
+    await db.query(`CREATE INDEX IF NOT EXISTS purchase_orders_customer_idx ON purchase_orders(customer_id);`);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS purchase_order_items (
+        id SERIAL PRIMARY KEY,
+        purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+        product_id INTEGER REFERENCES products(id),
+        description VARCHAR(255) NOT NULL,
+        measurement VARCHAR(20),
+        qty DOUBLE PRECISION DEFAULT 0,
+        unit_price DOUBLE PRECISION DEFAULT 0,
+        line_total DOUBLE PRECISION DEFAULT 0,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS purchase_order_id INTEGER;`);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS product_id INTEGER;`);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS description VARCHAR(255);`);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS measurement VARCHAR(20);`);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS qty DOUBLE PRECISION DEFAULT 0;`);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS unit_price DOUBLE PRECISION DEFAULT 0;`);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS line_total DOUBLE PRECISION DEFAULT 0;`);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW();`);
+    await db.query(`ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW();`);
+    await db.query(`CREATE INDEX IF NOT EXISTS purchase_order_items_po_idx ON purchase_order_items(purchase_order_id);`);
+    await db.query(`CREATE INDEX IF NOT EXISTS purchase_order_items_product_idx ON purchase_order_items(product_id);`);
+  });
+}
+
 async function ensureUserAccessSchema() {
   await runOnBusinessDatabases(async () => {
     await db.query(`
@@ -1379,6 +1479,7 @@ app.use("/api/rental-machines", rentalMachineRoutes);
 app.use("/api/general-machines", generalMachineRoutes);
 app.use("/api/support-tech-pay", supportTechPayRoutes);
 app.use("/api/services", serviceRecordRoutes);
+app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/category-model-options", categoryModelOptionRoutes);
 app.use("/api/ui-settings", uiSettingsRoutes);
 app.use("/api/email-setup", emailSetupRoutes);
@@ -1429,6 +1530,7 @@ async function startServer() {
     await ensureCustomerCodeSchema();
     await ensureVendorCategorySchema();
     await ensureProductRowSchema();
+    await ensurePurchaseOrderSchema();
     await ensureUserAccessSchema();
     await ensureCompanyProfilesSchema();
     await ensureUserMappingSchema();
